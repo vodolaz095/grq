@@ -1,4 +1,4 @@
-package queue
+package grq
 
 import (
 	"github.com/go-redis/redis"

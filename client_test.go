@@ -1,9 +1,17 @@
-package queue
+package grq
 
 import (
+	"github.com/go-redis/redis"
 	"testing"
 	"time"
 )
+
+func TestParseConnectionStringFailEmpty(t *testing.T) {
+	_, err := ParseConnectionString("")
+	if err == nil {
+		t.Errorf("no error thrown for malformed connection string")
+	}
+}
 
 func TestParseConnectionStringFail(t *testing.T) {
 	_, err := ParseConnectionString("thisIsBadConnectionString")
@@ -18,6 +26,33 @@ func TestParseConnectionStringSuccess(t *testing.T) {
 		t.Error(err)
 	}
 	t.Logf("Address - %s", opt.Addr)
+}
+
+func TestNewFromOptionsWhereRedisNotRunning(t *testing.T) {
+	_, err := NewFromOptions("notWorking", redis.Options{Addr: "127.0.0.1:1"}) // its not redis :-)
+	if err != nil {
+		if err.Error() != "dial tcp 127.0.0.1:1: connect: connection refused" {
+			t.Error(err)
+		}
+	}
+}
+
+func TestNewFromConnectionStringWhereRedisNotRunning(t *testing.T) {
+	_, err := NewFromConnectionString("notWorking", "redis://localhost:1") // its not redis :-)
+	if err != nil {
+		if err.Error() != "dial tcp [::1]:1: connect: connection refused" {
+			t.Error(err)
+		}
+	}
+}
+
+func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
+	_, err := NewFromConnectionString("notWorking", "http://localhost") // its not redis :-)
+	if err != nil {
+		if err.Error() != "unknown protocol http - only \"redis\" allowed" {
+			t.Error(err)
+		}
+	}
 }
 
 func TestNew(t *testing.T) {
@@ -107,4 +142,17 @@ func TestNew(t *testing.T) {
 		t.Error(err)
 	}
 
+	err = rq.Publish("it will fail")
+	if err != nil {
+		if err.Error() != "redis: client is closed" {
+			t.Error(err)
+		}
+	}
+
+	_, found, err = rq.GetTask()
+	if err != nil {
+		if err.Error() != "redis: client is closed" {
+			t.Error(err)
+		}
+	}
 }
