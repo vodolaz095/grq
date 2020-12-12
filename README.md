@@ -97,17 +97,17 @@ func main() {
 Big example
 ========================
 
-
 ```go
 
 
 package main
 
 import (
-"fmt"
-"log"
-"time"
-"github.com/vodolaz095/grq"
+	"github.com/vodolaz095/grq"
+	
+	"fmt"
+	"log"
+	"time"
 )
 
 func main() {
@@ -124,7 +124,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s : while making consumer", err)
 	}
-
 
 	go func() {
 		// We start consumer here in different subroutine
@@ -191,7 +190,6 @@ func main() {
 	} else {
 		fmt.Println("nothing left in the queue")
 	}
-
 
 	// publisher connection to redis database is closed
 	err = publisher.Close()
