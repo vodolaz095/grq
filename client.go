@@ -2,6 +2,7 @@ package grq
 
 import (
 	"github.com/go-redis/redis"
+	"os"
 
 	"fmt"
 	"net/url"
@@ -42,6 +43,7 @@ type RedisQueue struct {
 	name      string
 	options   redis.Options
 	heartbeat time.Duration
+	id        string
 
 	client   *redis.Client
 	listener *redis.Client
@@ -50,6 +52,17 @@ type RedisQueue struct {
 	ticker            *time.Ticker
 	subscriber        *redis.PubSub
 	stopper           chan bool
+	startedAt         time.Time
+}
+
+// GetID returns consumer id
+func (rq *RedisQueue) GetID() string {
+	return rq.id
+}
+
+// String returns string representation of consumer
+func (rq RedisQueue) String() string {
+	return rq.id
 }
 
 // GetQueueName returns queue name of this client
@@ -71,28 +84,28 @@ func (rq *RedisQueue) Close() (err error) {
 
 // New creates new redis queue client with default configuration
 func New(queue string) (rq *RedisQueue, err error) {
-	r := RedisQueue{
-		name: queue,
-		options: redis.Options{
-			Network: "tcp",
-			Addr:    "127.0.0.1:6379",
-		},
-		heartbeat: DefaultHeartbeat,
+	options := redis.Options{
+		Network: "tcp",
+		Addr:    "127.0.0.1:6379",
 	}
-	r.client = redis.NewClient(&r.options)
-	err = r.client.Ping().Err()
-	if err != nil {
-		return
-	}
-	return &r, nil
+	return NewFromOptions(queue, options)
 }
 
 // NewFromOptions creates redis queue client from redis.options provided
 func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return
+	}
+	id, err := getRandomID()
+	if err != nil {
+		return
+	}
 	r := RedisQueue{
 		name:      queue,
 		options:   options,
 		heartbeat: DefaultHeartbeat,
+		id:        fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
 	}
 	r.client = redis.NewClient(&r.options)
 	err = r.client.Ping().Err()
@@ -108,15 +121,5 @@ func NewFromConnectionString(queue, connectionString string) (rq *RedisQueue, er
 	if err != nil {
 		return
 	}
-	r := RedisQueue{
-		name:      queue,
-		options:   options,
-		heartbeat: DefaultHeartbeat,
-	}
-	r.client = redis.NewClient(&r.options)
-	err = r.client.Ping().Err()
-	if err != nil {
-		return
-	}
-	return &r, nil
+	return NewFromOptions(queue, options)
 }

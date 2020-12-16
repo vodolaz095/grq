@@ -4,6 +4,7 @@ import (
 	"github.com/go-redis/redis"
 
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,7 +21,7 @@ func TestGenerateOfflineQueue(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Logf("Offline publisher started...")
+	t.Logf("Offline publisher %s started...", rq3.GetID())
 	for i := 0; i < testSendLimit; i++ {
 		err = rq3.Publish(fmt.Sprintf("task %v created on %s", i, time.Now().Format(time.Stamp)))
 		if err != nil {
@@ -31,6 +32,15 @@ func TestGenerateOfflineQueue(t *testing.T) {
 	err = rq3.Cancel()
 	if err != nil {
 		if err.Error() != fmt.Sprintf("consumer %s is not running", testHeartbeatQueue) {
+			t.Error(err)
+		}
+	}
+	_, err = rq3.Age()
+	if err != nil {
+		if !strings.HasPrefix(err.Error(), "consumer") {
+			t.Error(err)
+		}
+		if !strings.HasSuffix(err.Error(), fmt.Sprintf(" of queue %s is not running", testHeartbeatQueue)) {
 			t.Error(err)
 		}
 	}
