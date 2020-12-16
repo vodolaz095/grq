@@ -96,4 +96,13 @@ func TestHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	// close closet client one more time to be sure
+	err = rq4.Close()
+	if err != nil {
+		if err.Error() != "redis: client is closed" {
+			t.Error(err)
+		}
+	}
+
 }

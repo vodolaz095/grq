@@ -28,7 +28,7 @@ func TestRedisQueue_Publish(t *testing.T) {
 }
 
 func TestRedisQueue_Consume(t *testing.T) {
-	rq2, err := New("testConsumeParallel")
+	rq2, err := NewFromConnectionString("testConsumeParallel", "redis://127.0.0.1:6379/0")
 	if err != nil {
 		t.Error(err)
 	}

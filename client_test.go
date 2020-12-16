@@ -8,14 +8,22 @@ import (
 
 func TestParseConnectionStringFailEmpty(t *testing.T) {
 	_, err := ParseConnectionString("")
-	if err == nil {
+	if err != nil {
+		if err.Error() != "unknown protocol  - only \"redis\" allowed" {
+			t.Error(err)
+		}
+	} else {
 		t.Errorf("no error thrown for malformed connection string")
 	}
 }
 
-func TestParseConnectionStringFail(t *testing.T) {
-	_, err := ParseConnectionString("thisIsBadConnectionString")
-	if err == nil {
+func TestParseConnectionStringFailWrongPort(t *testing.T) {
+	_, err := ParseConnectionString("redis://55:thisIsBadConnectionString")
+	if err != nil {
+		if err.Error() != "parse redis://55:thisIsBadConnectionString: invalid port \":thisIsBadConnectionString\" after host" {
+			t.Error(err)
+		}
+	} else {
 		t.Errorf("no error thrown for malformed connection string")
 	}
 }
@@ -50,6 +58,24 @@ func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "http://localhost") // its not redis :-)
 	if err != nil {
 		if err.Error() != "unknown protocol http - only \"redis\" allowed" {
+			t.Error(err)
+		}
+	}
+}
+
+func TestNewFromConnectionStringWrongPassword(t *testing.T) {
+	_, err := NewFromConnectionString("notWorking", "redis://usernameIgnored:thisIsWrongRedisPassword@127.0.0.1:6379")
+	if err != nil {
+		if err.Error() != "ERR Client sent AUTH, but no password is set" {
+			t.Error(err)
+		}
+	}
+}
+
+func TestNewFromConnectionStringMalformedDatabaseNumber(t *testing.T) {
+	_, err := NewFromConnectionString("notWorking", "redis://127.0.0.1/thisIsNotANumberDepictingRedisDB")
+	if err != nil {
+		if err.Error() != "strconv.ParseUint: parsing \"thisIsNotANumberDepictingRedisDB\": invalid syntax - while parsing redis database number >>>thisIsNotANumberDepictingRedisDB<<< as positive integer, like 4 in connection string redis://127.0.0.1/4" {
 			t.Error(err)
 		}
 	}

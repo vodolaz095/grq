@@ -6,7 +6,8 @@
 
 Package grq implements persistent, thread and cross process safe task queue, that uses [redis](https://redis.io) as backend.
 It should be used, when [RabbitMQ](https://www.rabbitmq.com/tutorials/tutorial-one-go.html) is too much, 
-and [MQTT](https://mqtt.org/getting-started/) is not enough.
+and [MQTT](https://mqtt.org/getting-started/) is not enough, and [BeanStalkd](https://github.com/beanstalkd/beanstalkd)
+is classic from [21 september of 2007 year](https://github.com/beanstalkd/beanstalkd/commit/50b5c5ed3fde33a18b90e93012ccd3e40c83fe38).
 
 
 Simple task publisher

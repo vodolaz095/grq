@@ -3,6 +3,8 @@ package grq
 import (
 	"github.com/go-redis/redis"
 	"os"
+	"strconv"
+	"strings"
 
 	"fmt"
 	"net/url"
@@ -34,6 +36,18 @@ func ParseConnectionString(connectionString string) (options redis.Options, err 
 		if present {
 			options.Password = pwd
 		}
+	}
+	if u.Path != "" {
+		dbTrimmed := strings.TrimPrefix(u.Path, "/")
+		dbn, errP := strconv.ParseUint(dbTrimmed, 10, 64)
+		if errP != nil {
+			err = fmt.Errorf("%s - while parsing redis database number >>>%s<<< as positive integer, like 4 in connection string redis://127.0.0.1/4",
+				errP,
+				dbTrimmed,
+			)
+			return
+		}
+		options.DB = int(dbn)
 	}
 	return
 }
