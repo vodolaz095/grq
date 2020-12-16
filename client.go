@@ -11,10 +11,10 @@ import (
 	"time"
 )
 
-// DefaultConnectionString is usual way to connect to redis running on 127.0.0.1:6379 without password
-const DefaultConnectionString = "redis://127.0.0.1:6379"
+// DefaultConnectionString is usual way to connect to redis running on 127.0.0.1:6379 without password, and we user database 0
+const DefaultConnectionString = "redis://127.0.0.1:6379/0"
 
-// DefaultHeartbeat depicts interval between checking, if there is anything in channel, if we haven't recieved notificaiton
+// DefaultHeartbeat depicts interval between checking, if there is anything in channel, if we haven't received notification
 const DefaultHeartbeat = 5 * time.Second
 
 // ChannelPrefix sets prefix for notification channels to reduce chaos
