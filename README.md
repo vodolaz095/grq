@@ -9,6 +9,8 @@ It should be used, when [RabbitMQ](https://www.rabbitmq.com/tutorials/tutorial-o
 and [MQTT](https://mqtt.org/getting-started/) is not enough, and [BeanStalkd](https://github.com/beanstalkd/beanstalkd)
 is classic from [21 september of 2007 year](https://github.com/beanstalkd/beanstalkd/commit/50b5c5ed3fde33a18b90e93012ccd3e40c83fe38).
 
+GRQ mean `Golang Redis Queue`. 
+
 
 Simple task publisher
 =======================
