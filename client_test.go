@@ -63,7 +63,7 @@ func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
 	}
 }
 
-func TestNewFromConnectionStringWrongPassword(t *testing.T) {
+func TestNewFromConnectionStringPasswordIsNotRequired(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "redis://usernameIgnored:thisIsWrongRedisPassword@127.0.0.1:6379")
 	if err != nil {
 		if err.Error() != "ERR Client sent AUTH, but no password is set" {
