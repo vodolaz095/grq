@@ -252,7 +252,7 @@ $ redis-cli lpop taskQueue1
 
 and payload of 1419719 will be returned.
 
-If we want to receive notification, when there are new messages in queue, we can 
+If we want to receive notification, when there are new messages in the queue, we can 
 [subscribe](https://redis.io/commands/subscribe) to this kind of messages easily:
 
 ```shell
