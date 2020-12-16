@@ -75,7 +75,7 @@ func TestNewFromConnectionStringPasswordIsNotRequired(t *testing.T) {
 func TestNewFromConnectionStringMalformedDatabaseNumber(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "redis://127.0.0.1/thisIsNotANumberDepictingRedisDB")
 	if err != nil {
-		if err.Error() != "strconv.ParseUint: parsing \"thisIsNotANumberDepictingRedisDB\": invalid syntax - while parsing redis database number >>>thisIsNotANumberDepictingRedisDB<<< as positive integer, like 4 in connection string redis://127.0.0.1/4" {
+		if err.Error() != "strconv.ParseUint: parsing \"thisIsNotANumberDepictingRedisDB\": invalid syntax - while parsing redis database number >>>thisIsNotANumberDepictingRedisDB<<< as positive integer, like 4 in connection string redis://127.0.0.1:6379/4" {
 			t.Error(err)
 		}
 	}

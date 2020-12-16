@@ -41,7 +41,7 @@ func ParseConnectionString(connectionString string) (options redis.Options, err 
 		dbTrimmed := strings.TrimPrefix(u.Path, "/")
 		dbn, errP := strconv.ParseUint(dbTrimmed, 10, 64)
 		if errP != nil {
-			err = fmt.Errorf("%s - while parsing redis database number >>>%s<<< as positive integer, like 4 in connection string redis://127.0.0.1/4",
+			err = fmt.Errorf("%s - while parsing redis database number >>>%s<<< as positive integer, like 4 in connection string redis://127.0.0.1:6379/4",
 				errP,
 				dbTrimmed,
 			)
