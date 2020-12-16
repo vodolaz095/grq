@@ -29,6 +29,11 @@ func TestGenerateOfflineQueue(t *testing.T) {
 		}
 		t.Logf("Task %v published", i)
 	}
+	err = rq3.PublishFirst("this task will be executed as first one")
+	if err != nil {
+		t.Errorf("%s : while publishing 1st task", err)
+	}
+
 	err = rq3.Cancel()
 	if err != nil {
 		if err.Error() != fmt.Sprintf("consumer %s is not running", testHeartbeatQueue) {
@@ -55,8 +60,19 @@ func TestGenerateOfflineQueue(t *testing.T) {
 func TestHeartbeat(t *testing.T) {
 	rq4, err := NewFromConnectionString(testHeartbeatQueue, DefaultConnectionString)
 	if err != nil {
-		t.Error(err)
+		t.Errorf("%s : while connecting to redis", err)
 	}
+	first, found, err := rq4.GetTask()
+	if err != nil {
+		t.Errorf("%s : while getting first task", err)
+	}
+	if !found {
+		t.Errorf("first task not found?")
+	}
+	if first != "this task will be executed as first one" {
+		t.Errorf("wrong first task payload")
+	}
+	t.Logf("First task payload is %s", first)
 	rq4.SetHeartbeat(10 * time.Millisecond) // fast
 	t.Logf("Consumer is starting...")
 	hbwg := sync.WaitGroup{}
@@ -95,6 +111,13 @@ func TestHeartbeat(t *testing.T) {
 	err = rq4.Close()
 	if err != nil {
 		t.Error(err)
+	}
+
+	err = rq4.PublishFirst("it will be rejected")
+	if err != nil {
+		if err.Error() != "redis: client is closed" {
+			t.Errorf("%s : while publishing first task to be rejected because of closed channel", err)
+		}
 	}
 
 	// close closet client one more time to be sure

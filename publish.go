@@ -12,6 +12,16 @@ func (rq *RedisQueue) Publish(p interface{}) (err error) {
 	return
 }
 
+// PublishFirst sends task to channel in way it will executed before all other tasks
+func (rq *RedisQueue) PublishFirst(p interface{}) (err error) {
+	err = rq.client.LPush(rq.name, fmt.Sprint(p)).Err()
+	if err != nil {
+		return
+	}
+	err = rq.client.Publish(fmt.Sprintf("%s%s", ChannelPrefix, rq.name), "1").Err()
+	return
+}
+
 // Count counts tasks currently in queue
 func (rq *RedisQueue) Count() (n int64, err error) {
 	n, err = rq.client.LLen(rq.name).Result()
