@@ -2,7 +2,6 @@ package grq
 
 import (
 	"github.com/go-redis/redis"
-	"strconv"
 
 	"fmt"
 	"time"
@@ -50,29 +49,44 @@ func (rq *RedisQueue) Age() (d time.Duration, err error) {
 
 // ListConsumers list other consumers on this queue as map with value of its age
 func (rq *RedisQueue) ListConsumers() (consumers map[string]time.Duration, err error) {
+	err = rq.
+		client.
+		ZRemRangeByScore(
+			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
+			"-inf",
+			fmt.Sprint(time.Now().Add(-11*time.Second).Unix()),
+		).Err()
+	if err != nil {
+		return
+	}
 	c, err := rq.
-		client.HGetAll(fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name)).
+		client.
+		ZRangeByScoreWithScores(
+			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
+			redis.ZRangeBy{
+				Min: fmt.Sprint(time.Now().Add(-10 * time.Second).Unix()),
+				Max: "+inf",
+			},
+		).
 		Result()
 	if err != nil {
 		return
 	}
 	consumers = make(map[string]time.Duration, 0)
-	for name, createdAsString := range c {
-		sec, err := strconv.ParseInt(createdAsString, 10, 64)
-		if err != nil {
-			break
-		}
-		consumers[name] = time.Now().Sub(time.Unix(sec, 0))
+	for _, score := range c {
+		consumers[fmt.Sprint(score.Member)] = time.Now().Sub(time.Unix(int64(score.Score), 0))
 	}
 	return
 }
 
-func (rq *RedisQueue) presense() (err error) {
+func (rq *RedisQueue) presence() (err error) {
 	if rq.isConsumerRunning {
-		err = rq.listener.HSet(
+		err = rq.listener.ZAdd(
 			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
-			rq.id,
-			time.Now().Unix(),
+			redis.Z{
+				Score:  float64(time.Now().Unix()),
+				Member: rq.id,
+			},
 		).Err()
 	}
 	return
@@ -86,7 +100,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 	if err != nil {
 		return
 	}
-	err = rq.presense()
+	err = rq.presence()
 	if err != nil {
 		return
 	}
@@ -103,7 +117,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 			select {
 			case <-rq.stopper:
 				rq.isConsumerRunning = false
-				err = rq.listener.HDel(fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
+				err = rq.listener.ZRem(fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
 				if err != nil {
 					panic(err)
 				}
@@ -121,7 +135,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 				if !rq.isConsumerRunning {
 					continue
 				}
-				err = rq.presense()
+				err = rq.presence()
 				if err != nil {
 					panic(fmt.Errorf("%s : while saving consumer state", err))
 				}
@@ -136,7 +150,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 				if !rq.isConsumerRunning {
 					continue
 				}
-				err = rq.presense()
+				err = rq.presence()
 				if err != nil {
 					panic(fmt.Errorf("%s : while saving consumer state", err))
 				}

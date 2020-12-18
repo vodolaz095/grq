@@ -69,7 +69,7 @@ func TestRedisQueue_Consume(t *testing.T) {
 	if !found {
 		t.Errorf("consumer %s not found in list of active consumers?", rq2)
 	}
-	t.Logf("Active Consumers: %s age in active consumers list is %s", rq2, c.String())
+	t.Logf("Active Consumers %s age is %s", rq2, c.String())
 
 	wg.Wait()
 	t.Logf("consuming stopped after %v messages", i)
