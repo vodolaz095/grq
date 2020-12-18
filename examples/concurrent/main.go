@@ -28,9 +28,9 @@ func main() {
 		go func(i int) {
 			consumer, err := grq.New("cord")
 			if err != nil {
-				log.Fatalf("%s : while creating consumer %v", err, l)
+				log.Fatalf("%s : while creating consumer %v", err, i)
 			}
-			log.Printf("Consumer %v with name %s created for queue", l, consumer.String())
+			log.Printf("Consumer %v with name %s created for queue", i, consumer.String())
 			consumer.SetHeartbeat(50 * time.Millisecond)
 			feed, err := consumer.Consume()
 			if err != nil {
