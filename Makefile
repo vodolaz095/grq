@@ -21,6 +21,9 @@ check: lint
 
 test: check
 
+bench:
+	go test -test.bench=.* 
+
 consumer:
 	go run example/consumer/main.go
 
