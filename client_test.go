@@ -1,9 +1,11 @@
 package grq
 
 import (
-	"github.com/go-redis/redis"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-redis/redis"
 )
 
 func TestParseConnectionStringFailEmpty(t *testing.T) {
@@ -20,7 +22,7 @@ func TestParseConnectionStringFailEmpty(t *testing.T) {
 func TestParseConnectionStringFailWrongPort(t *testing.T) {
 	_, err := ParseConnectionString("redis://55:thisIsBadConnectionString")
 	if err != nil {
-		if err.Error() != "parse redis://55:thisIsBadConnectionString: invalid port \":thisIsBadConnectionString\" after host" {
+		if !strings.Contains(err.Error(), "invalid port") {
 			t.Error(err)
 		}
 	} else {

@@ -1,14 +1,14 @@
 package grq
 
 import (
-	"github.com/go-redis/redis"
+	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
-
-	"fmt"
-	"net/url"
 	"time"
+
+	"github.com/go-redis/redis"
 )
 
 // DefaultConnectionString is usual way to connect to redis running on 127.0.0.1:6379 without password authentication, and we use database 0
