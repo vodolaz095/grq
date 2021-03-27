@@ -5,11 +5,12 @@
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/vodolaz095/grq)](https://pkg.go.dev/github.com/vodolaz095/grq?tab=doc)
 
 Package grq implements persistent, thread and cross process safe task queue, that uses [redis](https://redis.io) as backend.
-It should be used, when [RabbitMQ](https://www.rabbitmq.com/tutorials/tutorial-one-go.html) is too much, 
-and [MQTT](https://mqtt.org/getting-started/) is not enough, and [BeanStalkd](https://github.com/beanstalkd/beanstalkd)
-is classic from [21 september of 2007 year](https://github.com/beanstalkd/beanstalkd/commit/50b5c5ed3fde33a18b90e93012ccd3e40c83fe38).
+It should be used, when [RabbitMQ](https://www.rabbitmq.com/tutorials/tutorial-one-go.html) is too complicated,
+and [MQTT](https://mqtt.org/getting-started/) is not enough (because it cannot cache messages), and [BeanStalkd](https://github.com/beanstalkd/beanstalkd)
+is classic from [21 september of 2007 year](https://github.com/beanstalkd/beanstalkd/commit/50b5c5ed3fde33a18b90e93012ccd3e40c83fe38), that is hard to
+find in many linux distros.
 
-GRQ mean `Golang Redis Queue`. 
+GRQ mean `Golang Redis Queue`.
 
 
 Simple task publisher
@@ -109,7 +110,7 @@ package main
 
 import (
 	"github.com/vodolaz095/grq"
-	
+
 	"fmt"
 	"log"
 	"time"
@@ -215,8 +216,6 @@ Protocol definition
 ================
 
 Protocol is very simple, it can be used by your favourite redis client, including official `redis-cli`.
-
-
 Publishing task to queue `taskQueue1` with payload `1419719` can be performed by redis command [lpush](https://redis.io/commands/lpush):
 
 ```shell
@@ -225,15 +224,15 @@ $ redis-cli lpush taskQueue1 1419719
 
 ```
 
-If we want task to be executed first, it can be added to queue via [rpush](https://redis.io/commands/lpush):
+If we want task to be executed first, it can be added to queue via [rpush](https://redis.io/commands/rpush):
 
 ```shell
 
-$ redis-cli lpush taskQueue1 1419719
+$ redis-cli rpush taskQueue1 1419719
 
 ```
 
-If we want to notify consumers that task is published, and we don't want to wait, when consumers internal timers triggers, 
+If we want to notify consumers that task is published, and we don't want to wait, when consumers internal timers triggers,
 we can send notification that there is event in queue via [publish](https://redis.io/commands/publish) redis command.
 
 ```shell
@@ -252,7 +251,7 @@ $ redis-cli lpop taskQueue1
 
 and payload of 1419719 will be returned.
 
-If we want to receive notification, when there are new messages in the queue, we can 
+If we want to receive notification, when there are new messages in the queue, we can
 [subscribe](https://redis.io/commands/subscribe) to this kind of messages easily:
 
 ```shell
