@@ -1,8 +1,8 @@
 # grq
 
 [![Build Status](https://api.travis-ci.org/vodolaz095/grq.svg)](http://travis-ci.org/vodolaz095/grq)
-[![GoDoc](https://godoc.org/github.com/vodolaz095/grq?status.svg)](http://godoc.org/github.com/vodolaz095/grq)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/vodolaz095/grq)](https://pkg.go.dev/github.com/vodolaz095/grq?tab=doc)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vodolaz095/grq)](https://goreportcard.com/report/github.com/vodolaz095/grq)
 
 Package grq implements persistent, thread and cross process safe task queue, that uses [redis](https://redis.io) as backend.
 It should be used, when [RabbitMQ](https://www.rabbitmq.com/tutorials/tutorial-one-go.html) is too complicated,
