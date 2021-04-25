@@ -185,7 +185,7 @@ func TestNew(t *testing.T) {
 		}
 	}
 
-	_, found, err = rq.GetTask()
+	_, _, err = rq.GetTask()
 	if err != nil {
 		if err.Error() != "redis: client is closed" {
 			t.Error(err)
