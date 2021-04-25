@@ -50,9 +50,13 @@ func TestNewFromOptionsWhereRedisNotRunning(t *testing.T) {
 func TestNewFromConnectionStringWhereRedisNotRunning(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "redis://localhost:1") // its not redis :-)
 	if err != nil {
-		if err.Error() != "dial tcp [::1]:1: connect: connection refused" {
-			t.Error(err)
+		if err.Error() == "dial tcp [::1]:1: connect: connection refused" {
+			return
 		}
+		if err.Error() == "dial tcp 127.0.0.1:1: connect: connection refused" {
+			return
+		}
+		t.Error(err)
 	}
 }
 
