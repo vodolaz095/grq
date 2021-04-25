@@ -90,7 +90,7 @@ func main() {
 	}
 
 	for t := range tasks {
-		log.Printf("Task with payload >>>%s<<< recieved", t)
+		log.Printf("Task with payload >>>%s<<< received", t)
 	}
 	log.Printf("Consumer \"test\" was Canceled")
 }
@@ -147,7 +147,7 @@ func main() {
 				log.Fatalf("%s : while counting messages left", err)
 			}
 			// message consumed
-			log.Printf("Message recieved: %s. Messages left %v", msg, n)
+			log.Printf("Message received: %s. Messages left %v", msg, n)
 		}
 	}()
 

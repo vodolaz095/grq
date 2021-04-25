@@ -30,7 +30,7 @@ func main() {
 	}
 
 	for t := range tasks {
-		log.Printf("Task with payload >>>%s<<< recieved", t)
+		log.Printf("Task with payload >>>%s<<< received", t)
 	}
 	log.Printf("Consumer \"test\" was Canceled")
 }

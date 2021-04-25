@@ -37,7 +37,7 @@ func main() {
 				log.Fatalf("%s : while starting consumer", consumer.String())
 			}
 			for v := range feed {
-				log.Printf("Consumer %s recieved: %s.", consumer.String(), v)
+				log.Printf("Consumer %s received: %s.", consumer.String(), v)
 				m.Lock()
 				s, found := statistics[consumer.String()]
 				if !found {

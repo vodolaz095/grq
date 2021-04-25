@@ -37,7 +37,7 @@ func Example() {
 				log.Fatalf("%s : while counting messages left", err)
 			}
 			// message consumed
-			log.Printf("Message recieved: %s. Messages left %v", msg, n)
+			log.Printf("Message received: %s. Messages left %v", msg, n)
 		}
 	}()
 
@@ -141,6 +141,6 @@ func ExampleRedisQueue_Consume() {
 			log.Fatalf("%s : while counting messages left", err)
 		}
 		// message consumed
-		log.Printf("Message recieved: %s. Messages left %v", msg, n)
+		log.Printf("Message received: %s. Messages left %v", msg, n)
 	}
 }

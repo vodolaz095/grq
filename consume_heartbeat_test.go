@@ -87,7 +87,7 @@ func TestHeartbeat(t *testing.T) {
 
 		var i = 0
 		for msg := range feed {
-			t.Logf("Message %v recieved with payload >%s<", i, msg)
+			t.Logf("Message %v received with payload >%s<", i, msg)
 			i++
 			if i == testSendLimit {
 				break

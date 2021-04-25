@@ -48,7 +48,7 @@ func TestRedisQueue_Consume(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			t.Logf("Consumer %s with age %s. Message %v recieved with payload >%s<", rq2.id, age.String(), i, msg)
+			t.Logf("Consumer %s with age %s. Message %v received with payload >%s<", rq2.id, age.String(), i, msg)
 			wg.Done()
 			i++
 		}
