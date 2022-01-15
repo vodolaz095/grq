@@ -1,13 +1,13 @@
 package grq
 
 import (
-	"github.com/go-redis/redis"
-
 	"fmt"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 const testHeartbeatQueue = "testHeartBeat"

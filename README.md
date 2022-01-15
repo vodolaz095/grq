@@ -12,6 +12,9 @@ find in many linux distros.
 
 GRQ mean `Golang Redis Queue`.
 
+Advertisement
+=======================
+You can hire the author of this package by Upwork - [https://www.upwork.com/freelancers/~0120ba573d09c66c51](https://www.upwork.com/freelancers/~0120ba573d09c66c51/)
 
 Simple task publisher
 =======================
@@ -109,11 +112,12 @@ Big example
 package main
 
 import (
-	"github.com/vodolaz095/grq"
-
+    "context"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/vodolaz095/grq"
 )
 
 func main() {
@@ -126,6 +130,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s : while making publisher", err)
 	}
+    publisher.Context = context.Background() // by default, context is TODO, but you can change it, if required
 	consumer, err := grq.NewFromConnectionString("example", redisConnectionString)
 	if err != nil {
 		log.Fatalf("%s : while making consumer", err)

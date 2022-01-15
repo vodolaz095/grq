@@ -1,6 +1,7 @@
 package grq
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 // DefaultConnectionString is usual way to connect to redis running on 127.0.0.1:6379 without password authentication, and we use database 0
@@ -67,6 +68,8 @@ type RedisQueue struct {
 	subscriber        *redis.PubSub
 	stopper           chan bool
 	startedAt         time.Time
+
+	Context context.Context
 }
 
 // GetID returns consumer id
@@ -120,9 +123,10 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 		options:   options,
 		heartbeat: DefaultHeartbeat,
 		id:        fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
+		Context:   context.TODO(),
 	}
 	r.client = redis.NewClient(&r.options)
-	err = r.client.Ping().Err()
+	err = r.client.Ping(r.Context).Err()
 	if err != nil {
 		return
 	}
