@@ -1,6 +1,6 @@
 # grq
 
-[![Build Status](https://api.travis-ci.org/vodolaz095/grq.svg)](http://travis-ci.org/vodolaz095/grq)
+[![Go](https://github.com/vodolaz095/grq/actions/workflows/go.yml/badge.svg)](https://github.com/vodolaz095/grq/actions/workflows/go.yml)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/vodolaz095/grq)](https://pkg.go.dev/github.com/vodolaz095/grq?tab=doc)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vodolaz095/grq)](https://goreportcard.com/report/github.com/vodolaz095/grq)
 
