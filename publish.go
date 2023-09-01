@@ -3,7 +3,7 @@ package grq
 import "fmt"
 
 // Publish sends task to channel
-func (rq *RedisQueue) Publish(p interface{}) (err error) {
+func (rq *RedisQueue) Publish(p any) (err error) {
 	err = rq.client.RPush(rq.Context, rq.name, fmt.Sprint(p)).Err()
 	if err != nil {
 		return
