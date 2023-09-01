@@ -10,11 +10,12 @@ and [MQTT](https://mqtt.org/getting-started/) is not enough (because it cannot c
 is classic from [21 september of 2007 year](https://github.com/beanstalkd/beanstalkd/commit/50b5c5ed3fde33a18b90e93012ccd3e40c83fe38), that is hard to
 find in many linux distros.
 
-GRQ mean `Golang Redis Queue`.
+GRQ means `Golang Redis Queue`.
 
 Advertisement
 =======================
-You can hire the author of this package by Upwork - [https://www.upwork.com/freelancers/~0120ba573d09c66c51](https://www.upwork.com/freelancers/~0120ba573d09c66c51/)
+You can support development of this module by sending money directly to author
+https://www.tinkoff.ru/rm/ostroumov.anatoliy2/4HFzm76801/
 
 Simple task publisher
 =======================

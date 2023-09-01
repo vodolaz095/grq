@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 // SetHeartbeat sets interval, after which RedisQueue tries to consume last task from its queue
@@ -86,7 +86,7 @@ func (rq *RedisQueue) presence() (err error) {
 		err = rq.listener.ZAdd(
 			rq.Context,
 			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
-			&redis.Z{
+			redis.Z{
 				Score:  float64(time.Now().Unix()),
 				Member: rq.id,
 			},
@@ -97,6 +97,13 @@ func (rq *RedisQueue) presence() (err error) {
 
 // Consume starts getting tasks from channel
 func (rq *RedisQueue) Consume() (feed chan string, err error) {
+	defer func() {
+		raw := recover()
+		if raw != nil {
+			err = fmt.Errorf("%s", raw)
+		}
+	}()
+
 	feed = make(chan string)
 	rq.listener = redis.NewClient(&rq.options)
 	err = rq.listener.Ping(rq.Context).Err()
@@ -118,6 +125,22 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 	loop:
 		for {
 			select {
+			case <-rq.Context.Done():
+				rq.isConsumerRunning = false
+				err = rq.listener.ZRem(rq.Context, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
+				if err != nil {
+					panic(err)
+				}
+				rq.ticker.Stop()
+				err = rq.subscriber.Unsubscribe(rq.Context, p)
+				if err != nil {
+					panic(err)
+				}
+				err = rq.subscriber.Close()
+				if err != nil {
+					panic(err)
+				}
+				break loop
 			case <-rq.stopper:
 				rq.isConsumerRunning = false
 				err = rq.listener.ZRem(rq.Context, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
@@ -125,7 +148,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 					panic(err)
 				}
 				rq.ticker.Stop()
-				err := rq.subscriber.Unsubscribe(rq.Context, p)
+				err = rq.subscriber.Unsubscribe(rq.Context, p)
 				if err != nil {
 					panic(err)
 				}
@@ -142,9 +165,9 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 				if err != nil {
 					panic(fmt.Errorf("%s : while saving consumer state", err))
 				}
-				payload, found, err := rq.GetTask()
-				if err != nil {
-					panic(fmt.Errorf("%s while consuming message %s %v", err, payload, found))
+				payload, found, errGt := rq.GetTask()
+				if errGt != nil {
+					panic(fmt.Errorf("%s while consuming message %s %v", errGt, payload, found))
 				}
 				if found {
 					f <- payload
@@ -157,9 +180,9 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 				if err != nil {
 					panic(fmt.Errorf("%s : while saving consumer state", err))
 				}
-				payload, found, err := rq.GetTask()
-				if err != nil {
-					panic(fmt.Errorf("%s while consuming message %s %v", err, payload, found))
+				payload, found, errGt := rq.GetTask()
+				if errGt != nil {
+					panic(fmt.Errorf("%s while consuming message %s %v", errGt, payload, found))
 				}
 				if found {
 					f <- payload
