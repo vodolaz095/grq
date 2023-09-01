@@ -1,7 +1,9 @@
-golint:
-	# installing golint code quality tools and checking, if it can be started
-	cd ~ && go get -u golang.org/x/lint/golint
-	golint
+# installing golint code quality tools and checking, if it can be started
+# go install golang.org/x/lint/golint@latest
+lint:
+	gofmt  -w=true -s=true -l=true ./
+	golint ./...
+	go vet ./...
 
 deps:
 	# install all dependencies required for running application
