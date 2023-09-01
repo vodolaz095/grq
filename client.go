@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
-// DefaultConnectionString is usual way to connect to redis running on 127.0.0.1:6379 without password authentication, and we use database 0
+// DefaultConnectionString is a usual way to connect to redis running on 127.0.0.1:6379 without password authentication, and we use database 0
 const DefaultConnectionString = "redis://127.0.0.1:6379/0"
 
 // DefaultHeartbeat depicts interval between checking, if there is anything in channel, if we haven't received notification
@@ -69,7 +69,8 @@ type RedisQueue struct {
 	stopper           chan bool
 	startedAt         time.Time
 
-	Context context.Context
+	Context       context.Context
+	CancelContext context.CancelFunc
 }
 
 // GetID returns consumer id
@@ -78,7 +79,7 @@ func (rq *RedisQueue) GetID() string {
 }
 
 // String returns string representation of consumer
-func (rq RedisQueue) String() string {
+func (rq *RedisQueue) String() string {
 	return rq.id
 }
 
@@ -118,12 +119,14 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 	if err != nil {
 		return
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	r := RedisQueue{
-		name:      queue,
-		options:   options,
-		heartbeat: DefaultHeartbeat,
-		id:        fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
-		Context:   context.TODO(),
+		name:          queue,
+		options:       options,
+		heartbeat:     DefaultHeartbeat,
+		id:            fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
+		Context:       ctx,
+		CancelContext: cancel,
 	}
 	r.client = redis.NewClient(&r.options)
 	err = r.client.Ping(r.Context).Err()

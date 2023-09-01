@@ -1,0 +1,50 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Go
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+        cache-dependency-path: go.sum
+
+    - name: install govulncheck utility
+      run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+    - name: install golint utility
+      run: go install golang.org/x/lint/golint@latest
+
+    - name: lint
+      run: make lint
+
+    - name: scan for vulnerable packages
+      run: make vuln
+
+    - name: run unit test
+      env:
+        REDIS_URL: redis://127.0.0.1:6379
+      run: go test -v ./...
