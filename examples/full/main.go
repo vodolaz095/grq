@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/vodolaz095/grq"
 	"log"
 	"time"
+
+	"github.com/vodolaz095/grq"
 )
 
 func main() {

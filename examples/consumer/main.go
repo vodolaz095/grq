@@ -1,9 +1,10 @@
 package main
 
 import (
-	queue "github.com/vodolaz095/grq"
 	"log"
 	"time"
+
+	queue "github.com/vodolaz095/grq"
 )
 
 func main() {

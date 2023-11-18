@@ -3,10 +3,7 @@ package grq
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -22,41 +19,14 @@ const DefaultHeartbeat = 5 * time.Second
 const ChannelPrefix = "redisQueue/"
 
 // ParseConnectionString parses connection string to generate redis connection options
-func ParseConnectionString(connectionString string) (options redis.Options, err error) {
-	u, err := url.Parse(connectionString)
-	if err != nil {
-		return
-	}
-	if u.Scheme != "redis" {
-		err = fmt.Errorf("unknown protocol %s - only \"redis\" allowed", u.Scheme)
-		return
-	}
-	options.Addr = u.Host
-	if u.User != nil {
-		pwd, present := u.User.Password()
-		if present {
-			options.Password = pwd
-		}
-	}
-	if u.Path != "" {
-		dbTrimmed := strings.TrimPrefix(u.Path, "/")
-		dbn, errP := strconv.ParseUint(dbTrimmed, 10, 64)
-		if errP != nil {
-			err = fmt.Errorf("%s - while parsing redis database number >>>%s<<< as positive integer, like 4 in connection string redis://127.0.0.1:6379/4",
-				errP,
-				dbTrimmed,
-			)
-			return
-		}
-		options.DB = int(dbn)
-	}
-	return
+func ParseConnectionString(connectionString string) (options *redis.Options, err error) {
+	return redis.ParseURL(connectionString)
 }
 
 // RedisQueue is struct that wraps redis client and provides Publish and Consume commands
 type RedisQueue struct {
 	name      string
-	options   redis.Options
+	options   *redis.Options
 	heartbeat time.Duration
 	id        string
 
@@ -122,13 +92,13 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 	ctx, cancel := context.WithCancel(context.Background())
 	r := RedisQueue{
 		name:          queue,
-		options:       options,
+		options:       &options,
 		heartbeat:     DefaultHeartbeat,
 		id:            fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
 		Context:       ctx,
 		CancelContext: cancel,
 	}
-	r.client = redis.NewClient(&r.options)
+	r.client = redis.NewClient(r.options)
 	err = r.client.Ping(r.Context).Err()
 	if err != nil {
 		return
@@ -142,5 +112,5 @@ func NewFromConnectionString(queue, connectionString string) (rq *RedisQueue, er
 	if err != nil {
 		return
 	}
-	return NewFromOptions(queue, options)
+	return NewFromOptions(queue, *options)
 }

@@ -11,7 +11,7 @@ import (
 func TestParseConnectionStringFailEmpty(t *testing.T) {
 	_, err := ParseConnectionString("")
 	if err != nil {
-		if err.Error() != "unknown protocol  - only \"redis\" allowed" {
+		if !strings.Contains(err.Error(), "redis: invalid URL scheme:") {
 			t.Error(err)
 		}
 	} else {
@@ -63,7 +63,7 @@ func TestNewFromConnectionStringWhereRedisNotRunning(t *testing.T) {
 func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "http://localhost") // its not redis :-)
 	if err != nil {
-		if err.Error() != "unknown protocol http - only \"redis\" allowed" {
+		if !strings.Contains(err.Error(), "redis: invalid URL scheme: http") {
 			t.Error(err)
 		}
 	}
@@ -72,20 +72,16 @@ func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
 func TestNewFromConnectionStringPasswordIsNotRequired(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "redis://usernameIgnored:thisIsWrongRedisPassword@127.0.0.1:6379")
 	if err != nil {
-		if err.Error() == "ERR Client sent AUTH, but no password is set" {
-			return
+		if !strings.Contains(err.Error(), "WRONGPASS invalid username-password pair or user is disabled.") {
+			t.Error(err)
 		}
-		if err.Error() == "ERR AUTH <password> called without any password configured for the default user. Are you sure your configuration is correct?" {
-			return
-		}
-		t.Error(err)
 	}
 }
 
 func TestNewFromConnectionStringMalformedDatabaseNumber(t *testing.T) {
 	_, err := NewFromConnectionString("notWorking", "redis://127.0.0.1/thisIsNotANumberDepictingRedisDB")
 	if err != nil {
-		if err.Error() != "strconv.ParseUint: parsing \"thisIsNotANumberDepictingRedisDB\": invalid syntax - while parsing redis database number >>>thisIsNotANumberDepictingRedisDB<<< as positive integer, like 4 in connection string redis://127.0.0.1:6379/4" {
+		if !strings.Contains(err.Error(), "redis: invalid database number: \"thisIsNotANumberDepictingRedisDB\"") {
 			t.Error(err)
 		}
 	}

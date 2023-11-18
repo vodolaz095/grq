@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/vodolaz095/grq"
-
 	"fmt"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/vodolaz095/grq"
 )
 
-// this is test to show consumers have normal distribution of tasks received
+// this is a test to show consumers have normal distribution of tasks received
 
 func main() {
 	publisher, err := grq.New("cord")

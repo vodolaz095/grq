@@ -105,7 +105,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 	}()
 
 	feed = make(chan string)
-	rq.listener = redis.NewClient(&rq.options)
+	rq.listener = redis.NewClient(rq.options)
 	err = rq.listener.Ping(rq.Context).Err()
 	if err != nil {
 		return
