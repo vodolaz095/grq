@@ -1,8 +1,8 @@
 module github.com/vodolaz095/grq
 
-go 1.24
+go 1.24.9
 
-require github.com/redis/go-redis/v9 v9.14.0
+require github.com/redis/go-redis/v9 v9.16.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
