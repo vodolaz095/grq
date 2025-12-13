@@ -118,7 +118,6 @@ func (rq *RedisQueue) Consume(ctx context.Context) (feed chan string, err error)
 	p := fmt.Sprintf("%s%s", ChannelPrefix, rq.name)
 	rq.subscriber = rq.listener.Subscribe(ctx, p)
 	rq.ticker = time.NewTicker(rq.heartbeat)
-	rq.stopper = make(chan bool)
 	sb := rq.subscriber.Channel()
 	rq.startedAt = time.Now()
 	rq.isConsumerRunning = true
@@ -143,16 +142,11 @@ func (rq *RedisQueue) Consume(ctx context.Context) (feed chan string, err error)
 					panic(err)
 				}
 				break loop
-
 			case <-sb:
 				if !rq.isConsumerRunning {
 					continue
 				}
-				err = rq.presence()
-				if err != nil {
-					panic(fmt.Errorf("%s : while saving consumer state", err))
-				}
-				payload, found, errGt := rq.GetTask()
+				payload, found, errGt := rq.GetTask(context.Background())
 				if errGt != nil {
 					panic(fmt.Errorf("%s while consuming message %s %v", errGt, payload, found))
 				}
@@ -163,11 +157,11 @@ func (rq *RedisQueue) Consume(ctx context.Context) (feed chan string, err error)
 				if !rq.isConsumerRunning {
 					continue
 				}
-				err = rq.presence()
+				err = rq.presence(context.Background())
 				if err != nil {
 					panic(fmt.Errorf("%s : while saving consumer state", err))
 				}
-				payload, found, errGt := rq.GetTask()
+				payload, found, errGt := rq.GetTask(context.Background())
 				if errGt != nil {
 					panic(fmt.Errorf("%s while consuming message %s %v", errGt, payload, found))
 				}

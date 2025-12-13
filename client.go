@@ -36,7 +36,6 @@ type RedisQueue struct {
 	isConsumerRunning bool
 	ticker            *time.Ticker
 	subscriber        *redis.PubSub
-	stopper           chan bool
 	startedAt         time.Time
 }
 
