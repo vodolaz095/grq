@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -16,13 +17,14 @@ func (t task) String() string {
 }
 
 func main() {
-	q, err := queue.New("test")
+	ctx := context.TODO()
+	q, err := queue.New(ctx, "test")
 	if err != nil {
 		log.Fatalf("%s : while connecting to redis", err)
 	}
 
 	for t := range time.NewTicker(time.Second).C {
-		err = q.Publish(task{Payload: t.Format(time.Stamp)})
+		err = q.Publish(ctx, task{Payload: t.Format(time.Stamp)})
 		if err != nil {
 			log.Fatalf("%s : while publishing task", err)
 		}

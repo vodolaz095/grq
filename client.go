@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9/maintnotifications"
 )
 
 // DefaultConnectionString is a usual way to connect to redis running on 127.0.0.1:6379 without password authentication, and we use database 0
@@ -18,6 +19,8 @@ const DefaultHeartbeat = 5 * time.Second
 // ChannelPrefix sets prefix for notification channels to reduce chaos
 const ChannelPrefix = "redisQueue/"
 
+const DefaultTaskTimeout = 10 * time.Second
+
 // ParseConnectionString parses connection string to generate redis connection options
 func ParseConnectionString(connectionString string) (options *redis.Options, err error) {
 	return redis.ParseURL(connectionString)
@@ -28,6 +31,7 @@ type RedisQueue struct {
 	name      string
 	options   *redis.Options
 	heartbeat time.Duration
+	timeout   time.Duration
 	id        string
 
 	client   *redis.Client
@@ -60,14 +64,7 @@ func (rq *RedisQueue) GetQueueName() string {
 
 // Close closes all connections to redis
 func (rq *RedisQueue) Close() (err error) {
-	err = rq.client.Close()
-	if err != nil {
-		return
-	}
-	if rq.isConsumerRunning {
-		return rq.Cancel()
-	}
-	return
+	return rq.client.Close()
 }
 
 // New creates new redis queue client with default configuration
@@ -89,11 +86,16 @@ func NewFromOptions(ctx context.Context, queue string, options redis.Options) (r
 	if err != nil {
 		return
 	}
+	options.MaintNotificationsConfig = &maintnotifications.Config{
+		Mode: maintnotifications.ModeDisabled,
+	}
+
 	r := RedisQueue{
 		name:      queue,
 		options:   &options,
 		heartbeat: DefaultHeartbeat,
 		id:        fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
+		timeout:   DefaultTaskTimeout,
 	}
 	r.client = redis.NewClient(r.options)
 	err = r.client.Ping(ctx).Err()

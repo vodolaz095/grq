@@ -1,6 +1,7 @@
 package grq
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -12,11 +13,11 @@ func Example() {
 
 	// creating publisher and consumer, utilizing same `example` queue
 
-	publisher, err := NewFromConnectionString("example", redisConnectionString)
+	publisher, err := NewFromConnectionString(context.TODO(), "example", redisConnectionString)
 	if err != nil {
 		log.Fatalf("%s : while making publisher", err)
 	}
-	consumer, err := NewFromConnectionString("example", redisConnectionString)
+	consumer, err := NewFromConnectionString(context.TODO(), "example", redisConnectionString)
 	if err != nil {
 		log.Fatalf("%s : while making consumer", err)
 	}
@@ -101,20 +102,20 @@ func Example() {
 }
 
 func ExampleRedisQueue_Publish() {
-	publisher, err := New("example")
+	publisher, err := New(context.TODO(), "example")
 	if err != nil {
 		log.Fatalf("%s : while making publisher", err)
 	}
 	// we send tasks via publisher, anything that can be stringified by fmt.Sprint will do the trick
-	err = publisher.Publish("message 1")
+	err = publisher.Publish(context.TODO(), "message 1")
 	if err != nil {
 		log.Fatalf("%s : while publishing message 1", err)
 	}
-	err = publisher.Publish(time.Now())
+	err = publisher.Publish(context.TODO(), time.Now())
 	if err != nil {
 		log.Fatalf("%s : while publishing message 2", err)
 	}
-	err = publisher.Publish(fmt.Errorf("errors can be stringified, so it will do the trick"))
+	err = publisher.Publish(context.TODO(), fmt.Errorf("errors can be stringified, so it will do the trick"))
 	if err != nil {
 		log.Fatalf("%s : while publishing message 3", err)
 	}

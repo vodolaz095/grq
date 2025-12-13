@@ -31,7 +31,10 @@ bench:
 	go test -test.bench=.*
 
 consumer:
-	go run example/consumer/main.go
+	go run examples/consumer/main.go
 
 publisher:
-	go run example/publisher/main.go
+	go run examples/publisher/main.go
+
+full:
+	go run examples/full/main.go

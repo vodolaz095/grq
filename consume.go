@@ -6,6 +6,12 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // SetHeartbeat sets interval, after which RedisQueue tries to consume last task from its queue
@@ -14,64 +20,58 @@ func (rq *RedisQueue) SetHeartbeat(interval time.Duration) {
 }
 
 // GetTask consumes one task from channel
-func (rq *RedisQueue) GetTask(ctx context.Context) (payload string, found bool, err error) {
+func (rq *RedisQueue) GetTask(initialCtx context.Context) (payload string, found bool, err error) {
+	ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.GetTask",
+		trace.WithSpanKind(trace.SpanKindProducer),
+		trace.WithAttributes(attribute.String("queue", rq.name)),
+	)
+	attachCodeLocationToSpan(span)
+	defer span.End()
 	payload, err = rq.client.LPop(ctx, rq.name).Result()
 	if err != nil {
 		if err == redis.Nil {
+			span.AddEvent("nothing found")
+			span.SetAttributes(attribute.Bool("found", false))
 			return "", false, nil
 		}
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
 		return
 	}
 	if payload != "" {
+		span.AddEvent("task is found")
+		span.SetAttributes(attribute.Bool("found", false))
+		span.SetStatus(codes.Ok, "task is found")
 		found = true
-	}
-	return
-}
-
-// Cancel stops consumer
-func (rq *RedisQueue) Cancel() (err error) {
-	if rq.isConsumerRunning {
-		rq.stopper <- true
-	} else {
-		err = fmt.Errorf("consumer %s is not running", rq.name)
 	}
 	return
 }
 
 // Age returns how long ago consumer was started
 func (rq *RedisQueue) Age() (d time.Duration, err error) {
-	if !rq.isConsumerRunning {
-		err = fmt.Errorf("consumer %s of queue %s is not running", rq.id, rq.name)
-		return
-	}
 	d = time.Now().Sub(rq.startedAt)
 	return
 }
 
 // ListConsumers list other consumers on this queue as map with value of its age
-func (rq *RedisQueue) ListConsumers(ctx context.Context) (consumers map[string]time.Duration, err error) {
-	err = rq.
-		client.
-		ZRemRangeByScore(
-			ctx,
-			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
-			"-inf",
-			fmt.Sprint(time.Now().Add(-11*time.Second).Unix()),
-		).Err()
+func (rq *RedisQueue) ListConsumers(initialCtx context.Context) (consumers map[string]time.Duration, err error) {
+	ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.ListConsumers",
+		trace.WithSpanKind(trace.SpanKindProducer),
+		trace.WithAttributes(attribute.String("queue", rq.name)),
+	)
+	attachCodeLocationToSpan(span)
+	defer span.End()
+	err = rq.client.ZRemRangeByScore(
+		ctx, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
+		"-inf", fmt.Sprint(time.Now().Add(-11*time.Second).Unix()),
+	).Err()
 	if err != nil {
 		return
 	}
-	c, err := rq.
-		client.
-		ZRangeByScoreWithScores(
-			ctx,
-			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
-			&redis.ZRangeBy{
-				Min: fmt.Sprint(time.Now().Add(-10 * time.Second).Unix()),
-				Max: "+inf",
-			},
-		).
-		Result()
+	c, err := rq.client.ZRangeByScoreWithScores(
+		ctx, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
+		&redis.ZRangeBy{Min: fmt.Sprint(time.Now().Add(-10 * time.Second).Unix()), Max: "+inf"},
+	).Result()
 	if err != nil {
 		return
 	}
@@ -79,99 +79,120 @@ func (rq *RedisQueue) ListConsumers(ctx context.Context) (consumers map[string]t
 	for _, score := range c {
 		consumers[fmt.Sprint(score.Member)] = time.Now().Sub(time.Unix(int64(score.Score), 0))
 	}
+	span.SetAttributes(attribute.Int("n_consumers", len(consumers)))
 	return
 }
 
 func (rq *RedisQueue) presence(ctx context.Context) (err error) {
-	if rq.isConsumerRunning {
-		err = rq.listener.ZAdd(
-			ctx,
-			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
-			redis.Z{
-				Score:  float64(time.Now().Unix()),
-				Member: rq.id,
-			},
-		).Err()
-	}
-	return
+	return rq.listener.ZAdd(ctx, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
+		redis.Z{Score: float64(time.Now().Unix()), Member: rq.id},
+	).Err()
 }
 
-// Consume starts getting tasks from channel
-func (rq *RedisQueue) Consume(ctx context.Context) (feed chan string, err error) {
-	defer func() {
-		raw := recover()
-		if raw != nil {
-			err = fmt.Errorf("%s", raw)
-		}
-	}()
-
-	feed = make(chan string)
+// ConsumeConcurrently starts getting tasks from channel
+func (rq *RedisQueue) ConsumeConcurrently(initialCtx context.Context, worker WorkerFunc, concurrency int) (err error) {
 	rq.listener = redis.NewClient(rq.options)
-	err = rq.listener.Ping(ctx).Err()
+	err = rq.listener.Ping(initialCtx).Err()
 	if err != nil {
 		return
 	}
-	err = rq.presence(ctx)
+	err = rq.presence(initialCtx)
 	if err != nil {
 		return
 	}
+	feed := make(chan string, 1000)
 	p := fmt.Sprintf("%s%s", ChannelPrefix, rq.name)
-	rq.subscriber = rq.listener.Subscribe(ctx, p)
+	rq.subscriber = rq.listener.Subscribe(initialCtx, p)
 	rq.ticker = time.NewTicker(rq.heartbeat)
 	sb := rq.subscriber.Channel()
 	rq.startedAt = time.Now()
 	rq.isConsumerRunning = true
-	go func(f chan<- string) {
-	loop:
+
+	eg, ctx := errgroup.WithContext(initialCtx)
+
+	eg.Go(func() error {
 		for {
 			select {
+
 			case <-ctx.Done():
-				stopperCtx := context.Background()
+				// log.Println("Consumer is stopping")
+				ctx2, cancel := context.WithTimeout(ctx, rq.timeout)
 				rq.isConsumerRunning = false
-				err = rq.listener.ZRem(stopperCtx, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
+				rq.ticker.Stop()
+				err = rq.listener.ZRem(ctx2, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
 				if err != nil {
-					panic(err)
+					cancel()
+					return err
 				}
 				rq.ticker.Stop()
-				err = rq.subscriber.Unsubscribe(stopperCtx, p)
+				err = rq.subscriber.Unsubscribe(ctx2, p)
 				if err != nil {
-					panic(err)
+					cancel()
+					return err
 				}
 				err = rq.subscriber.Close()
 				if err != nil {
-					panic(err)
+					cancel()
+					return err
 				}
-				break loop
+				cancel()
+				return nil
+
 			case <-sb:
-				if !rq.isConsumerRunning {
-					continue
-				}
-				payload, found, errGt := rq.GetTask(context.Background())
+				// log.Println("Task event received")
+				ctx2, cancel := context.WithTimeout(ctx, rq.timeout)
+				payload, found, errGt := rq.GetTask(ctx2)
 				if errGt != nil {
-					panic(fmt.Errorf("%s while consuming message %s %v", errGt, payload, found))
+					cancel()
+					return err
 				}
 				if found {
-					f <- payload
+					feed <- payload
 				}
+				cancel()
+
 			case <-rq.ticker.C:
-				if !rq.isConsumerRunning {
-					continue
-				}
-				err = rq.presence(context.Background())
+				// log.Println("Task ticker is fired")
+				ctx2, cancel := context.WithTimeout(ctx, rq.timeout)
+				err = rq.presence(ctx2)
 				if err != nil {
-					panic(fmt.Errorf("%s : while saving consumer state", err))
+					cancel()
+					return err
 				}
-				payload, found, errGt := rq.GetTask(context.Background())
+				payload, found, errGt := rq.GetTask(ctx2)
 				if errGt != nil {
-					panic(fmt.Errorf("%s while consuming message %s %v", errGt, payload, found))
+					cancel()
+					return errGt
 				}
 				if found {
-					f <- payload
+					feed <- payload
 				}
+				cancel()
 			}
 		}
-		close(f)
-		return
-	}(feed)
-	return
+	})
+
+	for i := 0; i <= concurrency; i++ {
+		eg.Go(func() error {
+			for {
+				select {
+				case <-ctx.Done():
+					return nil
+				case msg := <-feed:
+					ctx2, cancel := context.WithTimeout(ctx, rq.timeout)
+					errW := worker(ctx2, msg, i)
+					if errW != nil {
+						errW = rq.Publish(ctx, msg)
+						if errW != nil {
+							cancel()
+							return errW
+						}
+					}
+					cancel()
+				}
+			}
+		})
+	}
+
+	return eg.Wait()
 }
