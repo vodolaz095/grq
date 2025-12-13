@@ -19,6 +19,11 @@ func (rq *RedisQueue) SetHeartbeat(interval time.Duration) {
 	rq.heartbeat = interval
 }
 
+// SetConsumerTimeout sets maximum for execution duration of task
+func (rq *RedisQueue) SetConsumerTimeout(interval time.Duration) {
+	rq.timeout = interval
+}
+
 // GetTask consumes one task from channel
 func (rq *RedisQueue) GetTask(initialCtx context.Context) (payload string, found bool, err error) {
 	ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.GetTask",

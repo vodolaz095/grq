@@ -19,6 +19,7 @@ const DefaultHeartbeat = 5 * time.Second
 // ChannelPrefix sets prefix for notification channels to reduce chaos
 const ChannelPrefix = "redisQueue/"
 
+// DefaultTaskTimeout sets duration allowed for task execution
 const DefaultTaskTimeout = 10 * time.Second
 
 // ParseConnectionString parses connection string to generate redis connection options
@@ -43,6 +44,7 @@ type RedisQueue struct {
 	startedAt         time.Time
 }
 
+// Ping is used to check redis connection
 func (rq *RedisQueue) Ping(ctx context.Context) error {
 	return rq.client.Ping(ctx).Err()
 }
