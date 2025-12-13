@@ -38,9 +38,10 @@ type RedisQueue struct {
 	subscriber        *redis.PubSub
 	stopper           chan bool
 	startedAt         time.Time
+}
 
-	Context       context.Context
-	CancelContext context.CancelFunc
+func (rq *RedisQueue) Ping(ctx context.Context) error {
+	return rq.client.Ping(ctx).Err()
 }
 
 // GetID returns consumer id
@@ -71,16 +72,16 @@ func (rq *RedisQueue) Close() (err error) {
 }
 
 // New creates new redis queue client with default configuration
-func New(queue string) (rq *RedisQueue, err error) {
+func New(ctx context.Context, queue string) (rq *RedisQueue, err error) {
 	options := redis.Options{
 		Network: "tcp",
 		Addr:    "127.0.0.1:6379",
 	}
-	return NewFromOptions(queue, options)
+	return NewFromOptions(ctx, queue, options)
 }
 
 // NewFromOptions creates redis queue client from redis.options provided
-func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err error) {
+func NewFromOptions(ctx context.Context, queue string, options redis.Options) (rq *RedisQueue, err error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return
@@ -89,17 +90,14 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 	if err != nil {
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
 	r := RedisQueue{
-		name:          queue,
-		options:       &options,
-		heartbeat:     DefaultHeartbeat,
-		id:            fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
-		Context:       ctx,
-		CancelContext: cancel,
+		name:      queue,
+		options:   &options,
+		heartbeat: DefaultHeartbeat,
+		id:        fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
 	}
 	r.client = redis.NewClient(r.options)
-	err = r.client.Ping(r.Context).Err()
+	err = r.client.Ping(ctx).Err()
 	if err != nil {
 		return
 	}
@@ -107,10 +105,10 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 }
 
 // NewFromConnectionString creates redis queue client from connection string provided
-func NewFromConnectionString(queue, connectionString string) (rq *RedisQueue, err error) {
+func NewFromConnectionString(ctx context.Context, queue, connectionString string) (rq *RedisQueue, err error) {
 	options, err := ParseConnectionString(connectionString)
 	if err != nil {
 		return
 	}
-	return NewFromOptions(queue, *options)
+	return NewFromOptions(ctx, queue, *options)
 }

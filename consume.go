@@ -1,6 +1,7 @@
 package grq
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,8 +14,8 @@ func (rq *RedisQueue) SetHeartbeat(interval time.Duration) {
 }
 
 // GetTask consumes one task from channel
-func (rq *RedisQueue) GetTask() (payload string, found bool, err error) {
-	payload, err = rq.client.LPop(rq.Context, rq.name).Result()
+func (rq *RedisQueue) GetTask(ctx context.Context) (payload string, found bool, err error) {
+	payload, err = rq.client.LPop(ctx, rq.name).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return "", false, nil
@@ -48,11 +49,11 @@ func (rq *RedisQueue) Age() (d time.Duration, err error) {
 }
 
 // ListConsumers list other consumers on this queue as map with value of its age
-func (rq *RedisQueue) ListConsumers() (consumers map[string]time.Duration, err error) {
+func (rq *RedisQueue) ListConsumers(ctx context.Context) (consumers map[string]time.Duration, err error) {
 	err = rq.
 		client.
 		ZRemRangeByScore(
-			rq.Context,
+			ctx,
 			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
 			"-inf",
 			fmt.Sprint(time.Now().Add(-11*time.Second).Unix()),
@@ -63,7 +64,7 @@ func (rq *RedisQueue) ListConsumers() (consumers map[string]time.Duration, err e
 	c, err := rq.
 		client.
 		ZRangeByScoreWithScores(
-			rq.Context,
+			ctx,
 			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
 			&redis.ZRangeBy{
 				Min: fmt.Sprint(time.Now().Add(-10 * time.Second).Unix()),
@@ -81,10 +82,10 @@ func (rq *RedisQueue) ListConsumers() (consumers map[string]time.Duration, err e
 	return
 }
 
-func (rq *RedisQueue) presence() (err error) {
+func (rq *RedisQueue) presence(ctx context.Context) (err error) {
 	if rq.isConsumerRunning {
 		err = rq.listener.ZAdd(
-			rq.Context,
+			ctx,
 			fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name),
 			redis.Z{
 				Score:  float64(time.Now().Unix()),
@@ -96,7 +97,7 @@ func (rq *RedisQueue) presence() (err error) {
 }
 
 // Consume starts getting tasks from channel
-func (rq *RedisQueue) Consume() (feed chan string, err error) {
+func (rq *RedisQueue) Consume(ctx context.Context) (feed chan string, err error) {
 	defer func() {
 		raw := recover()
 		if raw != nil {
@@ -106,16 +107,16 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 
 	feed = make(chan string)
 	rq.listener = redis.NewClient(rq.options)
-	err = rq.listener.Ping(rq.Context).Err()
+	err = rq.listener.Ping(ctx).Err()
 	if err != nil {
 		return
 	}
-	err = rq.presence()
+	err = rq.presence(ctx)
 	if err != nil {
 		return
 	}
 	p := fmt.Sprintf("%s%s", ChannelPrefix, rq.name)
-	rq.subscriber = rq.listener.Subscribe(rq.Context, p)
+	rq.subscriber = rq.listener.Subscribe(ctx, p)
 	rq.ticker = time.NewTicker(rq.heartbeat)
 	rq.stopper = make(chan bool)
 	sb := rq.subscriber.Channel()
@@ -125,14 +126,15 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 	loop:
 		for {
 			select {
-			case <-rq.Context.Done():
+			case <-ctx.Done():
+				stopperCtx := context.Background()
 				rq.isConsumerRunning = false
-				err = rq.listener.ZRem(rq.Context, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
+				err = rq.listener.ZRem(stopperCtx, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
 				if err != nil {
 					panic(err)
 				}
 				rq.ticker.Stop()
-				err = rq.subscriber.Unsubscribe(rq.Context, p)
+				err = rq.subscriber.Unsubscribe(stopperCtx, p)
 				if err != nil {
 					panic(err)
 				}
@@ -141,22 +143,7 @@ func (rq *RedisQueue) Consume() (feed chan string, err error) {
 					panic(err)
 				}
 				break loop
-			case <-rq.stopper:
-				rq.isConsumerRunning = false
-				err = rq.listener.ZRem(rq.Context, fmt.Sprintf("%sconsumers_%s", ChannelPrefix, rq.name), rq.id).Err()
-				if err != nil {
-					panic(err)
-				}
-				rq.ticker.Stop()
-				err = rq.subscriber.Unsubscribe(rq.Context, p)
-				if err != nil {
-					panic(err)
-				}
-				err = rq.subscriber.Close()
-				if err != nil {
-					panic(err)
-				}
-				break loop
+
 			case <-sb:
 				if !rq.isConsumerRunning {
 					continue
