@@ -2,9 +2,15 @@ package grq
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func Example() {
@@ -121,8 +127,8 @@ func ExampleRedisQueue_Publish() {
 	}
 }
 
-func ExampleRedisQueue_Consume() {
-	consumer, err := New("example")
+func ExampleRedisQueue_ConsumeConcurrently() {
+	consumer, err := New(context.TODO(), "example")
 	if err != nil {
 		log.Fatalf("%s : while consumer publisher", err)
 	}
@@ -131,17 +137,35 @@ func ExampleRedisQueue_Consume() {
 	consumer.SetHeartbeat(10 * time.Millisecond)
 	// if consumer did not received notifications for new tasks in example queue
 	// for 10 milliseconds, it will try to get new messages by itself
-	feed, err := consumer.Consume()
-	if err != nil {
-		log.Fatalf("%s : while making consumer", err)
-	}
-	for msg := range feed {
-		// reveal, how many messages are left in queue
-		n, err := consumer.Count()
-		if err != nil {
-			log.Fatalf("%s : while counting messages left", err)
+	consumerContext, consumerCancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer consumerCancel()
+	const concurrency = 5
+	err = consumer.ConsumeConcurrently(consumerContext, func(ctx context.Context, payload string, indx int) error {
+		ctx2, span := otel.GetTracerProvider().Tracer("consumer").Start(ctx, "worker",
+			trace.WithSpanKind(trace.SpanKindConsumer),
+			trace.WithAttributes(attribute.String("payload", payload)),
+			trace.WithAttributes(attribute.Int("index", indx)),
+		)
+		defer span.End()
+		// counting messages left
+		n, errC := consumer.Count(ctx2)
+		if errC != nil {
+			span.SetStatus(codes.Error, errC.Error())
+			span.RecordError(errC)
+			return errC
+		}
+		// let us make 1st consumer refuse messages to others
+		if indx == 1 {
+			return fmt.Errorf("consumer is bored, passing %s to other worker", payload)
 		}
 		// message consumed
-		log.Printf("Message received: %s. Messages left %v", msg, n)
+		log.Printf("Message received: %s. Consumer: %v. Messages left %v", payload, indx, n)
+		return nil
+	}, concurrency)
+	if err != nil {
+		if !errors.Is(err, context.Canceled) {
+			log.Fatalf("%s : while making consumer", err)
+		}
 	}
+	log.Println("Consumer finished")
 }
