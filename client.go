@@ -56,7 +56,7 @@ func (rq *RedisQueue) GetID() string {
 
 // String returns string representation of consumer
 func (rq *RedisQueue) String() string {
-	return rq.id
+	return rq.id + "@" + rq.name
 }
 
 // GetQueueName returns queue name of this client

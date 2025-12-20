@@ -27,7 +27,7 @@ func (rq *RedisQueue) SetConsumerTimeout(interval time.Duration) {
 // GetTask consumes one task from channel
 func (rq *RedisQueue) GetTask(initialCtx context.Context) (payload string, found bool, err error) {
 	ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.GetTask",
-		trace.WithSpanKind(trace.SpanKindProducer),
+		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(attribute.String("queue", rq.name)),
 	)
 	attachCodeLocationToSpan(span)
@@ -45,7 +45,7 @@ func (rq *RedisQueue) GetTask(initialCtx context.Context) (payload string, found
 	}
 	if payload != "" {
 		span.AddEvent("task is found")
-		span.SetAttributes(attribute.Bool("found", false))
+		span.SetAttributes(attribute.Bool("found", true))
 		span.SetStatus(codes.Ok, "task is found")
 		found = true
 	}
@@ -61,7 +61,7 @@ func (rq *RedisQueue) Age() (d time.Duration, err error) {
 // ListConsumers list other consumers on this queue as map with value of its age
 func (rq *RedisQueue) ListConsumers(initialCtx context.Context) (consumers map[string]time.Duration, err error) {
 	ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.ListConsumers",
-		trace.WithSpanKind(trace.SpanKindProducer),
+		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(attribute.String("queue", rq.name)),
 	)
 	attachCodeLocationToSpan(span)
