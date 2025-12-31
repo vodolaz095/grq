@@ -6,6 +6,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -16,7 +17,13 @@ func (rq *RedisQueue) Publish(initialCtx context.Context, p any) (err error) {
 		trace.WithAttributes(attribute.String("queue", rq.name)),
 	)
 	attachCodeLocationToSpan(span)
-	defer span.End()
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+		}
+		span.End()
+	}()
 	err = rq.client.RPush(ctx, rq.name, fmt.Sprint(p)).Err()
 	if err != nil {
 		return
@@ -32,7 +39,13 @@ func (rq *RedisQueue) PublishFirst(initialCtx context.Context, p interface{}) (e
 		trace.WithAttributes(attribute.String("queue", rq.name)),
 	)
 	attachCodeLocationToSpan(span)
-	defer span.End()
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+		}
+		span.End()
+	}()
 	err = rq.client.LPush(ctx, rq.name, fmt.Sprint(p)).Err()
 	if err != nil {
 		return
@@ -48,7 +61,13 @@ func (rq *RedisQueue) Count(initialCtx context.Context) (n int64, err error) {
 		trace.WithAttributes(attribute.String("queue", rq.name)),
 	)
 	attachCodeLocationToSpan(span)
-	defer span.End()
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+		}
+		span.End()
+	}()
 	n, err = rq.client.LLen(ctx, rq.name).Result()
 	return
 }
@@ -60,7 +79,13 @@ func (rq *RedisQueue) Purge(initialCtx context.Context) (err error) {
 		trace.WithAttributes(attribute.String("queue", rq.name)),
 	)
 	attachCodeLocationToSpan(span)
-	defer span.End()
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+		}
+		span.End()
+	}()
 	err = rq.client.Del(ctx, rq.name).Err()
 	return
 }
