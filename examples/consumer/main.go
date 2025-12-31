@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -8,30 +10,27 @@ import (
 )
 
 func main() {
-	q, err := queue.New("test")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	q, err := queue.New(ctx, "test")
 	if err != nil {
 		log.Fatalf("%s : while connecting to redis", err)
 	}
 	q.SetHeartbeat(100 * time.Millisecond)
 
-	go func() {
-		log.Println("Preparing to stop consuming")
+	const concurrency = 5
+	err = q.ConsumeConcurrently(ctx, func(ctx context.Context, payload string, index int) error {
 		time.Sleep(time.Second)
-		log.Println("Stopping consuming...")
-		err := q.Cancel()
-		if err != nil {
-			log.Fatalf("%s : while closing redis task queue", err)
+		if index == 0 {
+			log.Printf("Worker %v refused >%s<", index, payload)
+			return fmt.Errorf("try again")
 		}
-		log.Println("Consuming stopped")
-	}()
-
-	tasks, err := q.Consume()
+		log.Printf("Worker %v received >%s<", index, payload)
+		return nil
+	}, concurrency)
 	if err != nil {
-		log.Fatalf("%s : error consuming", err)
+		log.Print("error consuming: ", err)
 	}
-
-	for t := range tasks {
-		log.Printf("Task with payload >>>%s<<< received", t)
-	}
-	log.Printf("Consumer \"test\" was Canceled")
+	log.Print("Consumer \"test\" was Canceled")
 }

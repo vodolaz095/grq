@@ -7,24 +7,25 @@ import (
 )
 
 func BenchmarkRedisQueue_Publish(b *testing.B) {
-	publisher, err := New("bench")
+	publisher, err := New(b.Context(), "bench")
 	if err != nil {
 		b.Errorf("%s : while creating benchmark publisher", err)
 	}
 	b.SetParallelism(runtime.NumCPU())
+	ctx := b.Context()
 	for i := 0; i < b.N; i++ {
-		err = publisher.Publish(time.Now().UnixNano())
+		err = publisher.Publish(ctx, time.Now().UnixNano())
 		if err != nil {
 			b.Errorf("%s : while publishing task %v", err, i)
 		}
 	}
-	n, err := publisher.Count()
+	n, err := publisher.Count(ctx)
 	if err != nil {
 		b.Errorf("%s : while counting messages in queue", err)
 	}
 	b.Logf("We managed to publish %v messages", n)
 
-	err = publisher.Purge()
+	err = publisher.Purge(ctx)
 	if err != nil {
 		b.Errorf("%s : while purging benchmark queue", err)
 	}

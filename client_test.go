@@ -39,7 +39,7 @@ func TestParseConnectionStringSuccess(t *testing.T) {
 }
 
 func TestNewFromOptionsWhereRedisNotRunning(t *testing.T) {
-	_, err := NewFromOptions("notWorking", redis.Options{Addr: "127.0.0.1:1"}) // its not redis :-)
+	_, err := NewFromOptions(t.Context(), "notWorking", redis.Options{Addr: "127.0.0.1:1"}) // its not redis :-)
 	if err != nil {
 		if err.Error() != "dial tcp 127.0.0.1:1: connect: connection refused" {
 			t.Error(err)
@@ -48,7 +48,7 @@ func TestNewFromOptionsWhereRedisNotRunning(t *testing.T) {
 }
 
 func TestNewFromConnectionStringWhereRedisNotRunning(t *testing.T) {
-	_, err := NewFromConnectionString("notWorking", "redis://localhost:1") // its not redis :-)
+	_, err := NewFromConnectionString(t.Context(), "notWorking", "redis://localhost:1") // its not redis :-)
 	if err != nil {
 		if err.Error() == "dial tcp [::1]:1: connect: connection refused" {
 			return
@@ -61,7 +61,7 @@ func TestNewFromConnectionStringWhereRedisNotRunning(t *testing.T) {
 }
 
 func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
-	_, err := NewFromConnectionString("notWorking", "http://localhost") // its not redis :-)
+	_, err := NewFromConnectionString(t.Context(), "notWorking", "http://localhost") // its not redis :-)
 	if err != nil {
 		if !strings.Contains(err.Error(), "redis: invalid URL scheme: http") {
 			t.Error(err)
@@ -70,7 +70,7 @@ func TestNewFromConnectionStringWrongProtocol(t *testing.T) {
 }
 
 func TestNewFromConnectionStringPasswordIsNotRequired(t *testing.T) {
-	_, err := NewFromConnectionString("notWorking", "redis://usernameIgnored:thisIsWrongRedisPassword@127.0.0.1:6379")
+	_, err := NewFromConnectionString(t.Context(), "notWorking", "redis://usernameIgnored:thisIsWrongRedisPassword@127.0.0.1:6379")
 	if err != nil {
 		if !strings.Contains(err.Error(), "WRONGPASS invalid username-password pair or user is disabled.") {
 			t.Error(err)
@@ -79,7 +79,7 @@ func TestNewFromConnectionStringPasswordIsNotRequired(t *testing.T) {
 }
 
 func TestNewFromConnectionStringMalformedDatabaseNumber(t *testing.T) {
-	_, err := NewFromConnectionString("notWorking", "redis://127.0.0.1/thisIsNotANumberDepictingRedisDB")
+	_, err := NewFromConnectionString(t.Context(), "notWorking", "redis://127.0.0.1/thisIsNotANumberDepictingRedisDB")
 	if err != nil {
 		if !strings.Contains(err.Error(), "redis: invalid database number: \"thisIsNotANumberDepictingRedisDB\"") {
 			t.Error(err)
@@ -88,23 +88,23 @@ func TestNewFromConnectionStringMalformedDatabaseNumber(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-	rq, err := New("test")
+	rq, err := New(t.Context(), "test")
 	if err != nil {
 		t.Error(err)
 	}
-	err = rq.Publish("something")
+	err = rq.Publish(t.Context(), "something")
 	if err != nil {
 		t.Error(err)
 	}
-	err = rq.Publish(time.Now())
+	err = rq.Publish(t.Context(), time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	err = rq.Publish(1234)
+	err = rq.Publish(t.Context(), 1234)
 	if err != nil {
 		t.Error(err)
 	}
-	payload1, found, err := rq.GetTask()
+	payload1, found, err := rq.GetTask(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,7 +114,7 @@ func TestNew(t *testing.T) {
 	if payload1 != "something" {
 		t.Errorf("wrong payload %s instead of >>>something<<<", payload1)
 	}
-	payload2, found, err := rq.GetTask()
+	payload2, found, err := rq.GetTask(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
@@ -123,7 +123,7 @@ func TestNew(t *testing.T) {
 	}
 	t.Logf("payload2 is %s", payload2)
 
-	n, err := rq.Count()
+	n, err := rq.Count(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
@@ -132,7 +132,7 @@ func TestNew(t *testing.T) {
 		t.Errorf("wrong number of tasks in queue")
 	}
 
-	payload3, found, err := rq.GetTask()
+	payload3, found, err := rq.GetTask(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
@@ -143,7 +143,7 @@ func TestNew(t *testing.T) {
 		t.Errorf("wrong payload3 - %s", payload3)
 	}
 
-	empty, err := rq.Count()
+	empty, err := rq.Count(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
@@ -152,16 +152,16 @@ func TestNew(t *testing.T) {
 		t.Errorf("wrong number of tasks in queue")
 	}
 
-	err = rq.Publish("nothing")
+	err = rq.Publish(t.Context(), "nothing")
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = rq.Purge()
+	err = rq.Purge(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
-	n, err = rq.Count()
+	n, err = rq.Count(t.Context())
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,14 +174,14 @@ func TestNew(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = rq.Publish("it will fail")
+	err = rq.Publish(t.Context(), "it will fail")
 	if err != nil {
 		if err.Error() != "redis: client is closed" {
 			t.Error(err)
 		}
 	}
 
-	_, _, err = rq.GetTask()
+	_, _, err = rq.GetTask(t.Context())
 	if err != nil {
 		if err.Error() != "redis: client is closed" {
 			t.Error(err)

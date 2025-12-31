@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/redis/go-redis/v9/maintnotifications"
 )
 
 // DefaultConnectionString is a usual way to connect to redis running on 127.0.0.1:6379 without password authentication, and we use database 0
@@ -18,6 +19,9 @@ const DefaultHeartbeat = 5 * time.Second
 // ChannelPrefix sets prefix for notification channels to reduce chaos
 const ChannelPrefix = "redisQueue/"
 
+// DefaultTaskTimeout sets duration allowed for task execution
+const DefaultTaskTimeout = 10 * time.Second
+
 // ParseConnectionString parses connection string to generate redis connection options
 func ParseConnectionString(connectionString string) (options *redis.Options, err error) {
 	return redis.ParseURL(connectionString)
@@ -28,6 +32,7 @@ type RedisQueue struct {
 	name      string
 	options   *redis.Options
 	heartbeat time.Duration
+	timeout   time.Duration
 	id        string
 
 	client   *redis.Client
@@ -36,11 +41,12 @@ type RedisQueue struct {
 	isConsumerRunning bool
 	ticker            *time.Ticker
 	subscriber        *redis.PubSub
-	stopper           chan bool
 	startedAt         time.Time
+}
 
-	Context       context.Context
-	CancelContext context.CancelFunc
+// Ping is used to check redis connection
+func (rq *RedisQueue) Ping(ctx context.Context) error {
+	return rq.client.Ping(ctx).Err()
 }
 
 // GetID returns consumer id
@@ -50,7 +56,7 @@ func (rq *RedisQueue) GetID() string {
 
 // String returns string representation of consumer
 func (rq *RedisQueue) String() string {
-	return rq.id
+	return rq.id + "@" + rq.name
 }
 
 // GetQueueName returns queue name of this client
@@ -60,27 +66,20 @@ func (rq *RedisQueue) GetQueueName() string {
 
 // Close closes all connections to redis
 func (rq *RedisQueue) Close() (err error) {
-	err = rq.client.Close()
-	if err != nil {
-		return
-	}
-	if rq.isConsumerRunning {
-		return rq.Cancel()
-	}
-	return
+	return rq.client.Close()
 }
 
 // New creates new redis queue client with default configuration
-func New(queue string) (rq *RedisQueue, err error) {
+func New(ctx context.Context, queue string) (rq *RedisQueue, err error) {
 	options := redis.Options{
 		Network: "tcp",
 		Addr:    "127.0.0.1:6379",
 	}
-	return NewFromOptions(queue, options)
+	return NewFromOptions(ctx, queue, options)
 }
 
 // NewFromOptions creates redis queue client from redis.options provided
-func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err error) {
+func NewFromOptions(ctx context.Context, queue string, options redis.Options) (rq *RedisQueue, err error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return
@@ -89,17 +88,19 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 	if err != nil {
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	options.MaintNotificationsConfig = &maintnotifications.Config{
+		Mode: maintnotifications.ModeDisabled,
+	}
+
 	r := RedisQueue{
-		name:          queue,
-		options:       &options,
-		heartbeat:     DefaultHeartbeat,
-		id:            fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
-		Context:       ctx,
-		CancelContext: cancel,
+		name:      queue,
+		options:   &options,
+		heartbeat: DefaultHeartbeat,
+		id:        fmt.Sprintf("%s/%s/%s/%v", hostname, queue, id, os.Getpid()),
+		timeout:   DefaultTaskTimeout,
 	}
 	r.client = redis.NewClient(r.options)
-	err = r.client.Ping(r.Context).Err()
+	err = r.client.Ping(ctx).Err()
 	if err != nil {
 		return
 	}
@@ -107,10 +108,10 @@ func NewFromOptions(queue string, options redis.Options) (rq *RedisQueue, err er
 }
 
 // NewFromConnectionString creates redis queue client from connection string provided
-func NewFromConnectionString(queue, connectionString string) (rq *RedisQueue, err error) {
+func NewFromConnectionString(ctx context.Context, queue, connectionString string) (rq *RedisQueue, err error) {
 	options, err := ParseConnectionString(connectionString)
 	if err != nil {
 		return
 	}
-	return NewFromOptions(queue, *options)
+	return NewFromOptions(ctx, queue, *options)
 }
