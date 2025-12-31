@@ -94,6 +94,22 @@ func (rq *RedisQueue) presence(ctx context.Context) (err error) {
 	).Err()
 }
 
+func (rq *RedisQueue) wrapWorker(input WorkerFunc) WorkerFunc {
+	return func(initialCtx context.Context, payload string, indx int) error {
+		ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.worker",
+			trace.WithSpanKind(trace.SpanKindConsumer),
+			trace.WithAttributes(
+				attribute.String("queue", rq.name),
+				attribute.String("consumer.id", rq.GetID()),
+				attribute.Int("consumer.index", indx),
+				attribute.Int("consumer.payload_size", len(payload)),
+			))
+		attachCodeLocationToSpan(span)
+		defer span.End()
+		return input(ctx, payload, indx)
+	}
+}
+
 // ConsumeConcurrently starts getting tasks from channel
 func (rq *RedisQueue) ConsumeConcurrently(initialCtx context.Context, worker WorkerFunc, concurrency int) (err error) {
 	rq.listener = redis.NewClient(rq.options)
@@ -185,7 +201,7 @@ func (rq *RedisQueue) ConsumeConcurrently(initialCtx context.Context, worker Wor
 					return nil
 				case msg := <-feed:
 					ctx2, cancel := context.WithTimeout(ctx, rq.timeout)
-					errW := worker(ctx2, msg, i)
+					errW := rq.wrapWorker(worker)(ctx2, msg, i)
 					if errW != nil {
 						errW = rq.Publish(ctx, msg)
 						if errW != nil {
