@@ -20,9 +20,14 @@ func TestRedisQueue_Heartbeat(tt *testing.T) {
 			Network: "tcp",
 			Addr:    "127.0.0.1:6379",
 		})
+		if err != nil {
+			t.Error(err)
+			return
+		}
 		err = rq4.Ping(t.Context())
 		if err != nil {
 			t.Error(err)
+			return
 		}
 		err = rq4.Purge(t.Context())
 		if err != nil {

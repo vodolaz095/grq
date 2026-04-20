@@ -54,7 +54,7 @@ func (rq *RedisQueue) GetTask(initialCtx context.Context) (payload string, found
 
 // Age returns how long ago consumer was started
 func (rq *RedisQueue) Age() (d time.Duration, err error) {
-	d = time.Now().Sub(rq.startedAt)
+	d = time.Since(rq.startedAt)
 	return
 }
 
@@ -82,7 +82,7 @@ func (rq *RedisQueue) ListConsumers(initialCtx context.Context) (consumers map[s
 	}
 	consumers = make(map[string]time.Duration, 0)
 	for _, score := range c {
-		consumers[fmt.Sprint(score.Member)] = time.Now().Sub(time.Unix(int64(score.Score), 0))
+		consumers[fmt.Sprint(score.Member)] = time.Since(time.Unix(int64(score.Score), 0))
 	}
 	span.SetAttributes(attribute.Int("n_consumers", len(consumers)))
 	return
