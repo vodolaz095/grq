@@ -5,9 +5,11 @@ import (
 	"encoding/hex"
 )
 
+const keyLength = 10
+
 // getRandomID gets random hex encoded id
 func getRandomID() (id string, err error) {
-	b := make([]byte, 10)
+	b := make([]byte, keyLength)
 	_, err = rand.Read(b)
 	if err != nil {
 		return
