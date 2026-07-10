@@ -1,0 +1,13 @@
+---
+name: lint
+description: Run linter and fix lint erros.
+---
+
+# Lint
+
+1. Ensure GNU Make is installed
+2. Ensure gofmt, golint and go compiler are installed
+3. Run linter via `make lint`
+4. Try to fix lint errors by editing the code
+5. Make diff via `git diff`
+6. Show differences to operator
