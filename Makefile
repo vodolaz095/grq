@@ -38,3 +38,5 @@ publisher:
 
 full:
 	go run examples/full/main.go
+
+include make/*.mk
