@@ -1,6 +1,6 @@
 ---
 name: lint
-description: Run linter and fix lint erros.
+description: Run linter and fix lint errors.
 ---
 
 # Lint
