@@ -1,6 +1,7 @@
 package grq
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,17 +45,12 @@ func TestGetRandomID(t *testing.T) {
 
 // TestGetRandomIDHexFormat verifies that the generated IDs are valid hex strings.
 func TestGetRandomIDHexFormat(t *testing.T) {
+
 	for i := 0; i < 10; i++ {
 		id, err := getRandomID()
 		require.NoError(t, err)
-
-		// Verify the ID contains only hexadecimal characters
-		for _, c := range id {
-			assert.InDelta(t, int('0'), int(c)-int('0'), 1)
-			assert.InDelta(t, int('9'), int(c)-int('0'), 1)
-			assert.InDelta(t, int('a'), int(c)-int('a'), 1)
-			assert.InDelta(t, int('f'), int(c)-int('a'), 1)
-		}
+		_, err = hex.DecodeString(id)
+		require.NoError(t, err)
 	}
 }
 
