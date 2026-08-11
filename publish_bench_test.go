@@ -13,10 +13,10 @@ func BenchmarkRedisQueue_Publish(b *testing.B) {
 	}
 	b.SetParallelism(runtime.NumCPU())
 	ctx := b.Context()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		err = publisher.Publish(ctx, time.Now().UnixNano())
 		if err != nil {
-			b.Errorf("%s : while publishing task %v", err, i)
+			b.Errorf("%s : while publishing task %v", err, b.N)
 		}
 	}
 	n, err := publisher.Count(ctx)
