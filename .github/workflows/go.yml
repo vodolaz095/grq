@@ -47,3 +47,8 @@ jobs:
         env:
           REDIS_URL: redis://127.0.0.1:6379
         run: go test -v ./...
+
+      - name: run benchmarks
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+        run: make bench

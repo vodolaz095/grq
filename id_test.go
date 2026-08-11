@@ -1,6 +1,7 @@
 package grq
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,14 +11,14 @@ import (
 // TestGetRandomID generates multiple random IDs and verifies they are unique.
 // It runs the generator many times (100 iterations) to ensure it produces
 // different strings every time.
-func TestGetRandomID(t *testing.T) {
+func TestGetRandomID(tt *testing.T) {
 	// Test that the function returns a valid ID without errors
 	id, err := getRandomID()
-	require.NoError(t, err)
-	assert.NotEmpty(t, id)
+	require.NoError(tt, err)
+	assert.NotEmpty(tt, id)
 
 	// Run the generator multiple times and ensure uniqueness
-	t.Run("generates unique IDs", func(t *testing.T) {
+	tt.Run("generates unique IDs", func(t *testing.T) {
 		ids := make(map[string]int)
 		for i := 0; i < 100; i++ {
 			id, err := getRandomID()
@@ -33,7 +34,7 @@ func TestGetRandomID(t *testing.T) {
 	})
 
 	// Run the generator many times and check that all IDs have different lengths
-	t.Run("generates IDs with correct length", func(t *testing.T) {
+	tt.Run("generates IDs with correct length", func(t *testing.T) {
 		for i := 0; i < 50; i++ {
 			id, err := getRandomID()
 			require.NoError(t, err)
@@ -47,14 +48,8 @@ func TestGetRandomIDHexFormat(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		id, err := getRandomID()
 		require.NoError(t, err)
-
-		// Verify the ID contains only hexadecimal characters
-		for _, c := range id {
-			assert.InDelta(t, int('0'), int(c)-int('0'), 1)
-			assert.InDelta(t, int('9'), int(c)-int('0'), 1)
-			assert.InDelta(t, int('a'), int(c)-int('a'), 1)
-			assert.InDelta(t, int('f'), int(c)-int('a'), 1)
-		}
+		_, err = hex.DecodeString(id)
+		require.NoError(t, err)
 	}
 }
 
