@@ -11,21 +11,28 @@ func BenchmarkRedisQueue_Publish(b *testing.B) {
 	if err != nil {
 		b.Errorf("%s : while creating benchmark publisher", err)
 	}
+
+	err = publisher.Ping(b.Context())
+	if err != nil {
+		b.Errorf("%s : while pinging", err)
+		return
+	}
+
 	b.SetParallelism(runtime.NumCPU())
-	ctx := b.Context()
 	for b.Loop() {
-		err = publisher.Publish(ctx, time.Now().UnixNano())
+		err = publisher.Publish(b.Context(), time.Now().UnixNano())
 		if err != nil {
 			b.Errorf("%s : while publishing task %v", err, b.N)
 		}
 	}
-	n, err := publisher.Count(ctx)
+
+	n, err := publisher.Count(b.Context())
 	if err != nil {
 		b.Errorf("%s : while counting messages in queue", err)
 	}
 	b.Logf("We managed to publish %v messages", n)
 
-	err = publisher.Purge(ctx)
+	err = publisher.Purge(b.Context())
 	if err != nil {
 		b.Errorf("%s : while purging benchmark queue", err)
 	}
