@@ -14,7 +14,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var WrongDeferError = errors.New("defer error")
+// ErrWrongDefer is thrown when we try to publish deferred task to be executed in past
+var ErrWrongDefer = errors.New("defer error")
 
 // DeferAt executes a payload at a specific time.
 func (rq *RedisQueue) DeferAt(initialCtx context.Context, on time.Time, p any) (err error) {
@@ -29,9 +30,9 @@ func (rq *RedisQueue) DeferAt(initialCtx context.Context, on time.Time, p any) (
 	defer span.End()
 
 	if on.Before(time.Now()) {
-		span.SetStatus(codes.Error, WrongDeferError.Error())
-		span.RecordError(WrongDeferError)
-		return WrongDeferError
+		span.SetStatus(codes.Error, ErrWrongDefer.Error())
+		span.RecordError(ErrWrongDefer)
+		return ErrWrongDefer
 	}
 
 	err = rq.client.ZAdd(ctx, fmt.Sprintf("%s_def/%s", ChannelPrefix, rq.name), redis.Z{Score: float64(on.UnixMilli()), Member: p}).Err()
