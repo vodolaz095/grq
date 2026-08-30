@@ -80,6 +80,7 @@ func (rq *RedisQueue) ConsumeDeffered(initialCtx context.Context) (payload strin
 	if len(elements) == 0 {
 		return "", false, nil
 	}
+	// TODO - think on race condition!
 	payload = elements[0].Member.(string)
 	return payload, ready, nil
 }
