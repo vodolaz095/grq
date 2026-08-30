@@ -20,7 +20,7 @@ func TestGetRandomID(tt *testing.T) {
 	// Run the generator multiple times and ensure uniqueness
 	tt.Run("generates unique IDs", func(t *testing.T) {
 		ids := make(map[string]int)
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			id, err := getRandomID()
 			require.NoError(t, err)
 
@@ -35,7 +35,7 @@ func TestGetRandomID(tt *testing.T) {
 
 	// Run the generator many times and check that all IDs have different lengths
 	tt.Run("generates IDs with correct length", func(t *testing.T) {
-		for i := 0; i < 50; i++ {
+		for range 50 {
 			id, err := getRandomID()
 			require.NoError(t, err)
 			assert.Equal(t, keyLength*2, len(id))
@@ -45,7 +45,7 @@ func TestGetRandomID(tt *testing.T) {
 
 // TestGetRandomIDHexFormat verifies that the generated IDs are valid hex strings.
 func TestGetRandomIDHexFormat(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		id, err := getRandomID()
 		require.NoError(t, err)
 		_, err = hex.DecodeString(id)
@@ -58,14 +58,14 @@ func TestGetRandomIDHexFormat(t *testing.T) {
 func TestGetRandomIDConsistency(t *testing.T) {
 	// Generate IDs multiple times
 	ids := make([]string, 50)
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		id, err := getRandomID()
 		require.NoError(t, err)
 		ids[i] = id
 	}
 
 	// All IDs should be unique
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		for j := i + 1; j < 50; j++ {
 			assert.NotEqual(t, ids[i], ids[j])
 		}

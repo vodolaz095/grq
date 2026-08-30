@@ -33,7 +33,7 @@ func (rq *RedisQueue) Publish(initialCtx context.Context, p any) (err error) {
 }
 
 // PublishFirst sends task to channel in way it will be executed before all other tasks
-func (rq *RedisQueue) PublishFirst(initialCtx context.Context, p interface{}) (err error) {
+func (rq *RedisQueue) PublishFirst(initialCtx context.Context, p any) (err error) {
 	ctx, span := otel.GetTracerProvider().Tracer("grq").Start(initialCtx, "redisQueue.PublishFirst",
 		trace.WithSpanKind(trace.SpanKindProducer),
 		trace.WithAttributes(attribute.String("queue", rq.name)),

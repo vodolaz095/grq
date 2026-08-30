@@ -44,7 +44,7 @@ func TestRedisQueue_Heartbeat(tt *testing.T) {
 			t.Error(err)
 		}
 		t.Logf("Offline publisher %s started...", rq5.GetID())
-		for i := 0; i < testSendLimit; i++ {
+		for i := range testSendLimit {
 			err = rq5.Publish(t.Context(), fmt.Sprintf("task %v created on %s", i, time.Now().Format(time.Stamp)))
 			if err != nil {
 				t.Error(err)
