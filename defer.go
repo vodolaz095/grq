@@ -80,7 +80,11 @@ func (rq *RedisQueue) ConsumeDeffered(initialCtx context.Context) (payload strin
 	if len(elements) == 0 {
 		return "", false, nil
 	}
-	// TODO - think on race condition!
+	when := time.UnixMilli(int64(elements[0].Score))
 	payload = elements[0].Member.(string)
-	return payload, ready, nil
+	if when.Before(time.Now()) { // task is ready
+		return payload, ready, nil
+	}
+	// put it back into queue
+	return "", false, rq.client.ZAdd(ctx, key, elements...).Err()
 }
