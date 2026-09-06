@@ -1,7 +1,53 @@
 # AGENTS.md
 
-## Запуск компонентов для тестирования кода
+## Основные методы структуры `RedisQueue` (Client)
 
+Структура `RedisQueue` предоставляет следующие методы:
+
+### Управление клиентом
+| Метод | Описание |
+|-------|----------|
+| `Ping(ctx context.Context) error` | Проверка соединения с Redis |
+| `GetID() string` | Получение ID клиента |
+| `String() string` | Встроение строкового представления |
+| `GetQueueName() string` | Получение имени очереди |
+| `Close() error` | Закрытие соединения |
+
+### Публикация задач (publish.go)
+| Метод | Описание |
+|-------|----------|
+| `Publish(initialCtx context.Context, p any) error` | Публикация задачи в очередь |
+| `PublishFirst(initialCtx context.Context, p any) error` | Публикация задачи в начало очереди |
+| `Count(initialCtx context.Context) (int64, error)` | Получение количества задач в очереди |
+| `Purge(initialCtx context.Context) error` | Очистка всей очереди |
+
+### Потребление задач (consume.go)
+| Метод | Описание |
+|-------|----------|
+| `SetHeartbeat(interval time.Duration)` | Установка интервала heartbeat |
+| `SetConsumerTimeout(interval time.Duration)` | Установка таймаута потребителя |
+| `GetTask(initialCtx context.Context) (string, bool, error)` | Получение следующей задачи |
+| `Age() (time.Duration, error)` | Получение возраста задачи |
+| `ListConsumers(initialCtx context.Context) (map[string]time.Duration, error)` | Получение списка активных потребителей |
+| `ConsumeConcurrently(initialCtx context.Context, worker WorkerFunc, concurrency int) error` | Событие задачи с несколькими воркерами |
+
+### Отложенные задачи (defer.go)
+| Метод | Описание |
+|-------|----------|
+| `DeferAt(initialCtx context.Context, on time.Time, p any) error` | Запланировать задачу на конкретное время |
+| `DeferAfter(initialCtx context.Context, delay time.Duration, p any) error` | Запланировать задачу через интервал |
+| `ConsumeDeffered(initialCtx context.Context) (string, bool, error)` | Потребить готовую deferred задачу |
+
+### Внутренние методы
+- `presence(ctx context.Context) error` — проверка присутствия
+- `wrapWorker(input WorkerFunc) WorkerFunc` — обертка для worker функций
+
+### Ошибки
+| Ошибка | Описание |
+|--------|----------|
+| `ErrWrongDefer` | Ошибка при попытке запланировать задачу в прошлом |
+
+## Запуск компонентов для тестирования кода
 Для корректного запуска компонентов и тестирования кода в проекте, следуйте следующим шагам:
 
 1. **Подготовка окружения**:
@@ -20,12 +66,6 @@
    - **consumer**: пример потребителя задач из очереди. Запускается командой `go run examples/consumer/main.go`.
    - **publisher**: пример издателя задач в очередь. Запускается командой `go run examples/publisher/main.go`.
    - **full**: пример одновременной работы издателя и потребителя. Запускается командой `go run examples/full/main.go`.
-
-4. **Deferred Tasks (отложенные задачи)**:
-   - **DeferAt**: запланировать выполнение задачи на конкретное время.
-   - **DeferAfter**: запланировать выполнение задачи через интервал.
-   - **ConsumeDeffered**: потребить готовую deferred задачу из очереди.
-   - **ErrWrongDefer**: ошибка при попытке запланировать задачу в прошлом.
 
 4. **Документация и поддержка**:
    - Для получения дополнительной информации по использованию агентов и работе с проектом, обратитесь к документации в README.md и примерам, предоставленным в проекте.
